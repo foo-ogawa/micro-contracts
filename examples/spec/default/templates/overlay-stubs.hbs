@@ -1,0 +1,51 @@
+{{!-- Extension implementation stubs template --}}
+{{!-- Generates skeleton implementations for overlay handlers --}}
+// Auto-generated extension stubs - Edit to implement overlay logic
+import type {
+  OverlayResult,
+{{#each extensionTypes}}
+  {{this}}OverlayInput,
+  {{this}}Overlay,
+{{/each}}
+  OverlayRegistry,
+} from '{{config.contractPackage}}/overlays';
+
+{{#each extensions}}
+/**
+ * {{name}} overlay handler
+ * 
+ * Called when an endpoint has x-middleware: [{{name}}]
+ * Returns OverlayResult with success/error status
+ */
+export async function {{camelCase name}}(
+  input: {{pascalCase name}}OverlayInput
+): Promise<OverlayResult> {
+  // TODO: Implement {{name}} logic
+{{#if injectedParameters}}
+  // Input parameters:
+{{#each injectedParameters}}
+  // - {{name}}: {{schema.type}}{{#if required}} (required){{/if}}
+{{/each}}
+{{/if}}
+
+  // Example implementation:
+  // if (!validateSomething(input)) {
+  //   return {
+  //     success: false,
+  //     error: { status: 4xx, message: 'Error message', code: 'ERROR_CODE' },
+  //   };
+  // }
+
+  return { success: true, context: { /* optional context for domain */ } };
+}
+
+{{/each}}
+/**
+ * Registry of all overlay handlers
+ * Register this with your server framework
+ */
+export const overlayHandlers: OverlayRegistry = {
+{{#each extensions}}
+  {{camelCase name}}: {{camelCase name}},
+{{/each}}
+};

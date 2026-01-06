@@ -1,0 +1,70 @@
+# micro-contracts Configuration
+# Example demonstrating all features with README-aligned directory structure
+
+# Common settings (defaults for all modules)
+defaults:
+  contract:
+    output: packages/contract/{module}
+
+  contractPublic:
+    output: packages/contract-published/{module}
+
+  # Template-based outputs
+  outputs:
+    overlay-adapter:
+      output: server/src/{module}/overlayAdapter.generated.ts
+      template: spec/default/templates/overlay-adapter.hbs
+      condition: hasOverlays
+      config:
+        contractPackage: "@project/contract/{module}"
+
+    server-routes:
+      output: server/src/{module}/routes.generated.ts
+      template: spec/default/templates/fastify-routes.hbs
+      config:
+        domainsPath: fastify.domains.{module}
+        contractPackage: "@project/contract/{module}"
+
+    frontend-client:
+      output: frontend/src/{module}/api.generated.ts
+      template: spec/default/templates/fetch-client.hbs
+      config:
+        contractPackage: "@project/contract/{module}"
+
+  docs:
+    enabled: true
+
+  # Shared overlays (applied to all modules)
+  overlays:
+    shared:
+      - spec/_shared/overlays/middleware.overlay.yaml
+      - spec/_shared/overlays/correlation-id.overlay.yaml
+    collision: error  # error | warn | last-wins
+
+# Module definitions
+modules:
+  core:
+    openapi: spec/core/openapi/core.yaml
+    # Module-specific overlays (applied after shared overlays)
+    overlays:
+      - spec/core/overlays/cache.overlay.yaml
+    # Module-specific output overrides (optional)
+    outputs:
+      overlay-adapter:
+        template: spec/core/templates/overlay-adapter.hbs
+      server-routes:
+        template: spec/core/templates/routes.hbs
+      frontend-client:
+        template: spec/core/templates/client.hbs
+    # No external dependencies
+    dependsOn: []
+
+  billing:
+    openapi: spec/billing/openapi/billing.yaml
+    # Module-specific overlays
+    overlays:
+      - spec/billing/overlays/payment.overlay.yaml
+    # Cross-module dependencies (must match x-micro-contracts-depend-on in OpenAPI)
+    dependsOn:
+      - core.User.getUsers
+      - core.User.getUserById

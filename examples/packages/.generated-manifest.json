@@ -1,0 +1,148 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-01-05T10:59:28.953Z",
+  "generatorVersion": "1.0.0",
+  "files": {
+    "contract-published/billing/docs/api-reference.html": {
+      "sha256": "e99d19831990369f61078492956fc44309663bcac07249c5b4423ab2a02b2d82"
+    },
+    "contract-published/billing/docs/openapi.generated.yaml": {
+      "sha256": "580055bcfa9856c648015b270b27bda46dba10f0bf4f724f2f9a7f58f47f2360"
+    },
+    "contract-published/billing/domains/BillingApi.ts": {
+      "sha256": "98e33d484e21ddea883cd3b1f5962a1fd220eececdd04f9bf6c65148ced23efd"
+    },
+    "contract-published/billing/domains/index.ts": {
+      "sha256": "1f453a9cdfe826dfb90027faecd78b1059a236ae4ce62770c68a4b044bbf73b6"
+    },
+    "contract-published/billing/errors/index.ts": {
+      "sha256": "e448e50128b60b19eebfcee30127a426b69d0919b8219bfd6d38ff3628a62ac7"
+    },
+    "contract-published/billing/index.ts": {
+      "sha256": "8a1d340a6eba2b6db895a447c311d35b32b4dad7c732f9ff18fff258face44ab"
+    },
+    "contract-published/billing/schemas/index.ts": {
+      "sha256": "7bc8d5ef473d819f1466ed70422b325da29da0313fd7f54a9a1d657d97794f2a"
+    },
+    "contract-published/billing/schemas/types.ts": {
+      "sha256": "e998c2616aa524507d276101852ad82e7c0207f7364ed40ffff96285696af788"
+    },
+    "contract-published/billing/schemas/validators.ts": {
+      "sha256": "4c49f33c1bfc046cdc26a7534e1cd247c91124b1300f70bee1af23a05e7829ea"
+    },
+    "contract-published/core/docs/api-reference.html": {
+      "sha256": "b506c8e6203e80673e966b317892b7e7bb1a5d6c87d260bf68e137a7165ebbbb"
+    },
+    "contract-published/core/docs/openapi.generated.yaml": {
+      "sha256": "2eb3ae32a4c3baa6d8785d5f87186f31126224428641e650c8a4af2231df9fcf"
+    },
+    "contract-published/core/domains/HealthDomainApi.ts": {
+      "sha256": "af50fb505dea29bf855a33a3ca701dd958c1dc24586cf49427253f96d9ae0987"
+    },
+    "contract-published/core/domains/UserDomainApi.ts": {
+      "sha256": "ba79b1661d375cf8ff5032f8fa21c300ab4db383fb05331b499d7a7838d328d8"
+    },
+    "contract-published/core/domains/index.ts": {
+      "sha256": "92061d26127f2ea3b71a13d47203d68efdd739b990ee15501c364d8a09f46657"
+    },
+    "contract-published/core/errors/index.ts": {
+      "sha256": "e448e50128b60b19eebfcee30127a426b69d0919b8219bfd6d38ff3628a62ac7"
+    },
+    "contract-published/core/index.ts": {
+      "sha256": "8a1d340a6eba2b6db895a447c311d35b32b4dad7c732f9ff18fff258face44ab"
+    },
+    "contract-published/core/schemas/index.ts": {
+      "sha256": "7bc8d5ef473d819f1466ed70422b325da29da0313fd7f54a9a1d657d97794f2a"
+    },
+    "contract-published/core/schemas/types.ts": {
+      "sha256": "7d44634ae57b51aa8de16baf56d9f4d38ff7fc21d91ba7b75d3c35b6043e01e5"
+    },
+    "contract-published/core/schemas/validators.ts": {
+      "sha256": "4d3e5d585d2046a56aab2cb08b309932ff74c2a87ec8d6b5427bdaf9413a706c"
+    },
+    "contract/_shared/overlays/index.ts": {
+      "sha256": "d3d9aae22cb401e08c770350f3939fd877b33a6ba957460a2e660cab85a170fc"
+    },
+    "contract/billing/deps/core.ts": {
+      "sha256": "66c76b780d6228ccb402f42b0a1924b59411aaaaf1f86ca3bcfa04c1679c38e9"
+    },
+    "contract/billing/deps/index.ts": {
+      "sha256": "1c5cf52aba4b6ab7e4f26b4c4c34bd10ce037d3948cd08620143e0118add49a7"
+    },
+    "contract/billing/docs/api-reference.html": {
+      "sha256": "e99d19831990369f61078492956fc44309663bcac07249c5b4423ab2a02b2d82"
+    },
+    "contract/billing/docs/openapi.generated.yaml": {
+      "sha256": "6feeb74fa421ccf7ed1603e47089b5a8009dddef23531199dc8c342773361e4a"
+    },
+    "contract/billing/domains/BillingApi.ts": {
+      "sha256": "98e33d484e21ddea883cd3b1f5962a1fd220eececdd04f9bf6c65148ced23efd"
+    },
+    "contract/billing/domains/index.ts": {
+      "sha256": "1f453a9cdfe826dfb90027faecd78b1059a236ae4ce62770c68a4b044bbf73b6"
+    },
+    "contract/billing/errors/index.ts": {
+      "sha256": "e448e50128b60b19eebfcee30127a426b69d0919b8219bfd6d38ff3628a62ac7"
+    },
+    "contract/billing/index.ts": {
+      "sha256": "d853c2588223a7dcd07edf729cc634c947936db9252ff915d42e0277016092bd"
+    },
+    "contract/billing/overlays/index.ts": {
+      "sha256": "f60affdacaaca551e45b49b14cf92331dcb514bc4992f6da6ccd66018d65a0f8"
+    },
+    "contract/billing/schemas/index.ts": {
+      "sha256": "7bc8d5ef473d819f1466ed70422b325da29da0313fd7f54a9a1d657d97794f2a"
+    },
+    "contract/billing/schemas/types.ts": {
+      "sha256": "e998c2616aa524507d276101852ad82e7c0207f7364ed40ffff96285696af788"
+    },
+    "contract/billing/schemas/validators.ts": {
+      "sha256": "4c49f33c1bfc046cdc26a7534e1cd247c91124b1300f70bee1af23a05e7829ea"
+    },
+    "contract/core/docs/api-reference.html": {
+      "sha256": "9e55d10848f0d1fdb7881757bde41944f5a6f4a1bba90832b21ec7b7d920b9eb"
+    },
+    "contract/core/docs/openapi.generated.yaml": {
+      "sha256": "c9f7734e71eb3fed9ac096a08ea6f1ecd6bfc5c2ff01a4e2e87defd35792858c"
+    },
+    "contract/core/domains/AdminDomainApi.ts": {
+      "sha256": "c375d8185d4b692d9e193c63992fb9bf6b3c69f852bb853939cdd9387fc91e16"
+    },
+    "contract/core/domains/HealthDomainApi.ts": {
+      "sha256": "af50fb505dea29bf855a33a3ca701dd958c1dc24586cf49427253f96d9ae0987"
+    },
+    "contract/core/domains/TenantDomainApi.ts": {
+      "sha256": "650e8916b74bbc7081e18d973273071c94cd25443b27001e6deca20d5bb77d7c"
+    },
+    "contract/core/domains/UserDomainApi.ts": {
+      "sha256": "ac7bc21174d63d463fd9aa17adf74321f8513a7dd96423522ae6a824a7dc5a55"
+    },
+    "contract/core/domains/index.ts": {
+      "sha256": "7967b80c19f7e0810c3eb5c1c3c334f2229773104a92f32f943aa52444fc9989"
+    },
+    "contract/core/errors/index.ts": {
+      "sha256": "e448e50128b60b19eebfcee30127a426b69d0919b8219bfd6d38ff3628a62ac7"
+    },
+    "contract/core/index.ts": {
+      "sha256": "d853c2588223a7dcd07edf729cc634c947936db9252ff915d42e0277016092bd"
+    },
+    "contract/core/overlays/index.ts": {
+      "sha256": "ca57493bb9a49ca0492e52a3ac1c8388dcb03613860f92aab7c09e2a2a6183fa"
+    },
+    "contract/core/schemas/index.ts": {
+      "sha256": "7bc8d5ef473d819f1466ed70422b325da29da0313fd7f54a9a1d657d97794f2a"
+    },
+    "contract/core/schemas/types.ts": {
+      "sha256": "08ce1147df111b32849fa039ac5390f1c21f68f8c3e3b517b9a663bcc6939624"
+    },
+    "contract/core/schemas/validators.ts": {
+      "sha256": "b37e9a79e3e91ea7ee78176260f80810530bc33a1f1a5deaa2d699337f46b619"
+    },
+    "contract/package.json": {
+      "sha256": "242b1236df3e76160d7b57ff5a60e62457a53aea6ab52a8c1c98cce9445637b8"
+    },
+    "contract/tsconfig.json": {
+      "sha256": "d791f51b36215aba3e7cf7c5f69fc4b9fd6d4f2cf515718fdc93589fa05e2608"
+    }
+  }
+}

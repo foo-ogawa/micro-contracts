@@ -1,0 +1,373 @@
+# Auto-generated OpenAPI specification
+# DO NOT EDIT MANUALLY
+# 
+# Source: spec/billing/openapi/billing.yaml
+# Regenerate: micro-contracts generate
+# Filtered for public endpoints only
+
+openapi: 3.0.3
+info:
+  title: Billing API
+  version: 1.0.0
+  description: |
+    Billing module for invoice and payment management.
+    Depends on core.User for user information.
+  contact:
+    name: API Support
+    email: support@example.com
+  x-micro-contracts-depend-on:
+    - core.User.getUsers
+    - core.User.getUserById
+servers:
+  - url: http://localhost:3001
+tags:
+  - name: Billing
+    description: Invoice and payment management
+paths:
+  /api/billing/invoices:
+    get:
+      tags:
+        - Billing
+      operationId: getInvoices
+      summary: List all invoices
+      description: Retrieve a list of all invoices, optionally filtered by user or status.
+      x-micro-contracts-domain: Billing
+      x-micro-contracts-method: getInvoices
+      x-micro-contracts-published: true
+      x-middleware:
+        - requireAuth
+        - tenantIsolation
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+          description: Filter by user ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - draft
+              - pending
+              - paid
+              - overdue
+          description: Filter by invoice status
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Tenant-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Tenant identifier for multi-tenant isolation
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+      responses:
+        '200':
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceListResponse'
+        '400':
+          description: Missing or invalid X-Tenant-Id header
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+    post:
+      tags:
+        - Billing
+      operationId: createInvoice
+      summary: Create a new invoice
+      description: Create a new invoice for a user with the specified amount and currency.
+      x-micro-contracts-domain: Billing
+      x-micro-contracts-method: createInvoice
+      x-micro-contracts-published: true
+      x-middleware:
+        - requireAuth
+        - tenantIsolation
+      x-micro-contracts-depend-on:
+        - core.User.getUserById
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvoiceRequest'
+      responses:
+        '201':
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '400':
+          description: Missing or invalid X-Tenant-Id header
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Tenant-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Tenant identifier for multi-tenant isolation
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+  /api/billing/invoices/{id}:
+    get:
+      tags:
+        - Billing
+      operationId: getInvoiceById
+      summary: Get invoice by ID
+      description: Retrieve detailed information for a specific invoice by its unique ID.
+      x-micro-contracts-domain: Billing
+      x-micro-contracts-method: getInvoiceById
+      x-micro-contracts-published: true
+      x-middleware:
+        - requireAuth
+        - tenantIsolation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Tenant-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Tenant identifier for multi-tenant isolation
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '400':
+          description: Missing or invalid X-Tenant-Id header
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+        '404':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/NotFound
+  /api/billing/invoices/{id}/pay:
+    post:
+      tags:
+        - Billing
+      operationId: payInvoice
+      summary: Pay an invoice
+      description: Process payment for an invoice using the specified payment method.
+      x-micro-contracts-domain: Billing
+      x-micro-contracts-method: payInvoice
+      x-micro-contracts-published: true
+      x-middleware:
+        - requireAuth
+        - tenantIsolation
+      x-payment-validation:
+        - validatePaymentMethod
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Tenant-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Tenant identifier for multi-tenant isolation
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+        - name: X-Payment-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Payment method token for validation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayInvoiceRequest'
+      responses:
+        '200':
+          description: Payment successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResult'
+        '400':
+          description: Missing or invalid X-Tenant-Id header
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+        '402':
+          description: Payment required or payment method invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+components:
+  schemas:
+    Invoice:
+      type: object
+      required:
+        - id
+        - userId
+        - amount
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+          description: Reference to core.User
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          default: USD
+        status:
+          type: string
+          enum:
+            - draft
+            - pending
+            - paid
+            - overdue
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        paidAt:
+          type: string
+          format: date-time
+    InvoiceListResponse:
+      type: object
+      required:
+        - invoices
+        - total
+      properties:
+        invoices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Invoice'
+        total:
+          type: integer
+    CreateInvoiceRequest:
+      type: object
+      required:
+        - userId
+        - amount
+      properties:
+        userId:
+          type: string
+          description: User ID from core module
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          default: USD
+        description:
+          type: string
+    PayInvoiceRequest:
+      type: object
+      required:
+        - paymentMethodId
+      properties:
+        paymentMethodId:
+          type: string
+        savePaymentMethod:
+          type: boolean
+          default: false
+    PaymentResult:
+      type: object
+      required:
+        - success
+        - transactionId
+      properties:
+        success:
+          type: boolean
+        transactionId:
+          type: string
+        paidAt:
+          type: string
+          format: date-time

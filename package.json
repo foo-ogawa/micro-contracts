@@ -1,0 +1,65 @@
+{
+  "name": "micro-contracts",
+  "version": "1.0.0",
+  "description": "Contract-first OpenAPI toolchain that keeps TypeScript UI and microservices aligned via code generation",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "micro-contracts": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "generate": "tsx src/cli.ts generate",
+    "docs:sync": "npx embedoc build",
+    "docs:check": "npx embedoc build && git diff --exit-code README.md docs/",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "keywords": [
+    "openapi",
+    "contract-first",
+    "microservices",
+    "code-generation",
+    "fastify",
+    "typescript",
+    "api",
+    "guardrails",
+    "ai-development"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/user/micro-contracts.git"
+  },
+  "homepage": "https://github.com/user/micro-contracts#readme",
+  "bugs": {
+    "url": "https://github.com/user/micro-contracts/issues"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "glob": "^10.3.10",
+    "handlebars": "^4.7.8",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.0",
+    "embedoc": "^0.9.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

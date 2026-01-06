@@ -1,0 +1,32 @@
+# Payment validation overlay
+# Injects payment-related parameters and responses
+overlay: 1.0.0
+info:
+  title: Payment Validation Overlay
+  version: 1.0.0
+  description: |
+    This overlay injects payment validation based on x-payment-validation markers:
+    - validatePaymentMethod: Adds X-Payment-Token header + 402 response
+
+actions:
+  # ==========================================================================
+  # validatePaymentMethod: Payment method validation
+  # ==========================================================================
+  - target: "$.paths[*][*][?(@.x-payment-validation contains 'validatePaymentMethod')]"
+    x-micro-contracts-overlay-name: validatePaymentMethod
+    description: Inject X-Payment-Token header and 402 response
+    update:
+      parameters:
+        - name: X-Payment-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Payment method token for validation
+      responses:
+        '402':
+          description: Payment required or payment method invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: '../../_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails'

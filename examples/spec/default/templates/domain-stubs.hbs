@@ -1,0 +1,30 @@
+{{!-- Domain implementation stubs template --}}
+{{!-- Generates skeleton implementations for domain methods --}}
+// Auto-generated domain stubs - Edit to implement business logic
+import type { {{#each domains}}{{this}}DomainApi{{#unless @last}}, {{/unless}}{{/each}} } from '{{config.contractPackage}}/domains';
+import type * as types from '{{config.contractPackage}}/schemas/types';
+
+{{#each domains}}
+/**
+ * {{this}} Domain Implementation
+ * 
+ * Implement the methods below with your business logic.
+ * Generated methods receive HTTP-agnostic input objects.
+ */
+export class {{this}}Domain implements {{this}}DomainApi {
+{{#each ../operations}}
+{{#if (eq domain ../this)}}
+  /**
+   * {{summary}}
+   * {{method}} {{path}}
+   */
+  async {{domainMethod}}({{#if inputType}}input: types.{{inputType}}{{/if}}): Promise<types.{{responseType}}> {
+    // TODO: Implement {{domainMethod}}
+    throw new Error('Not implemented: {{domainMethod}}');
+  }
+
+{{/if}}
+{{/each}}
+}
+
+{{/each}}

@@ -1,0 +1,22 @@
+# Cache control overlay
+# Injects Cache-Control header for cacheable endpoints
+overlay: 1.0.0
+info:
+  title: Cache Control Overlay
+  version: 1.0.0
+  description: |
+    This overlay injects Cache-Control headers based on x-cache-ttl extension.
+    Use x-cache-ttl: <seconds> on operations to enable caching.
+
+actions:
+  # When x-cache-ttl is present, add Cache-Control response header
+  - target: "$.paths[*][*][?(@.x-cache-ttl)]"
+    description: Inject Cache-Control header for cacheable endpoints
+    update:
+      parameters:
+        - name: Cache-Control
+          in: header
+          schema:
+            type: string
+          description: Cache control directive (response header)
+

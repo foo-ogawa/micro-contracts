@@ -1,0 +1,26 @@
+# Correlation ID overlay
+# Injects X-Correlation-Id header for distributed tracing
+overlay: 1.0.0
+info:
+  title: Correlation ID Overlay
+  version: 1.0.0
+  description: |
+    This overlay injects X-Correlation-Id header for all operations.
+    Used for distributed tracing and request correlation.
+
+actions:
+  # Add X-Correlation-Id header to all operations
+  - target: "$.paths[*][*]"
+    description: Inject X-Correlation-Id header for distributed tracing
+    update:
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+

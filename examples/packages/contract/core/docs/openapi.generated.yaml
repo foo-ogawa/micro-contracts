@@ -1,0 +1,674 @@
+# Auto-generated OpenAPI specification
+# DO NOT EDIT MANUALLY
+# 
+# Source: spec/core/openapi/core.yaml
+# Regenerate: micro-contracts generate
+
+openapi: 3.0.3
+info:
+  title: Core API
+  description: |
+    Example API demonstrating micro-contracts features:
+    - Cross-cutting concerns with x-middleware
+    - Public/private endpoint separation
+    - Domain-driven code generation
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: http://localhost:3001
+    description: Development server
+tags:
+  - name: Users
+    description: User management
+  - name: Tenants
+    description: Multi-tenant operations
+  - name: Admin
+    description: Administrative operations
+  - name: Health
+    description: Health check endpoints
+paths:
+  /api/users:
+    get:
+      tags:
+        - Users
+      summary: Get users list
+      description: Retrieve a paginated list of all users in the system.
+      operationId: getUsers
+      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-method: getUsers
+      x-micro-contracts-published: true
+      x-middleware:
+        - requireAuth
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+      responses:
+        '200':
+          description: User list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+    post:
+      tags:
+        - Users
+      summary: Create new user
+      description: Create a new user account with the specified email and name.
+      operationId: createUser
+      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-method: createUser
+      x-micro-contracts-published: true
+      x-middleware:
+        - requireAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+  /api/users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: Retrieve detailed information for a specific user by their unique ID.
+      operationId: getUserById
+      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-method: getUserById
+      x-micro-contracts-published: true
+      x-middleware:
+        - requireAuth
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+        '404':
+          description: User not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+    put:
+      tags:
+        - Users
+      summary: Update user
+      description: Update an existing user's profile information.
+      operationId: updateUser
+      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-method: updateUser
+      x-middleware:
+        - requireAuth
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+        '404':
+          description: User not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+    delete:
+      tags:
+        - Users
+      summary: Delete user
+      description: Permanently delete a user account. Requires admin privileges.
+      operationId: deleteUser
+      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-method: deleteUser
+      x-middleware:
+        - requireAuth
+        - requireAdmin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+      responses:
+        '204':
+          description: User deleted
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+        '403':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Forbidden
+  /api/tenant/data:
+    get:
+      tags:
+        - Tenants
+      summary: Get tenant-scoped data
+      description: Retrieve data scoped to the current tenant context.
+      operationId: getTenantData
+      x-micro-contracts-domain: TenantDomain
+      x-micro-contracts-method: getData
+      x-middleware:
+        - requireAuth
+        - tenantIsolation
+        - rateLimit
+      responses:
+        '200':
+          description: Tenant data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantData'
+        '400':
+          description: Missing or invalid X-Tenant-Id header
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+        '429':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/TooManyRequests
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Tenant-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Tenant identifier for multi-tenant isolation
+        - name: X-RateLimit-Limit
+          in: header
+          schema:
+            type: integer
+          description: Rate limit ceiling for this endpoint (response header)
+        - name: X-RateLimit-Remaining
+          in: header
+          schema:
+            type: integer
+          description: Remaining requests in current window (response header)
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+    post:
+      tags:
+        - Tenants
+      summary: Create tenant data
+      description: Create new data entry within the current tenant scope.
+      operationId: createTenantData
+      x-micro-contracts-domain: TenantDomain
+      x-micro-contracts-method: createData
+      x-middleware:
+        - requireAuth
+        - tenantIsolation
+        - rateLimit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantDataRequest'
+      responses:
+        '201':
+          description: Data created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantData'
+        '400':
+          description: Missing or invalid X-Tenant-Id header
+          content:
+            application/problem+json:
+              schema:
+                $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/schemas/ProblemDetails
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+        '429':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/TooManyRequests
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Tenant-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Tenant identifier for multi-tenant isolation
+        - name: X-RateLimit-Limit
+          in: header
+          schema:
+            type: integer
+          description: Rate limit ceiling for this endpoint (response header)
+        - name: X-RateLimit-Remaining
+          in: header
+          schema:
+            type: integer
+          description: Remaining requests in current window (response header)
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+  /api/admin/stats:
+    get:
+      tags:
+        - Admin
+      summary: Get system statistics
+      description: Retrieve system-wide statistics including user counts and uptime. Admin only.
+      operationId: getSystemStats
+      x-micro-contracts-domain: AdminDomain
+      x-micro-contracts-method: getStats
+      x-middleware:
+        - requireAuth
+        - requireAdmin
+      responses:
+        '200':
+          description: System statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStats'
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+        '403':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Forbidden
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+  /api/admin/users/{id}/suspend:
+    post:
+      tags:
+        - Admin
+      summary: Suspend user account
+      description: Suspend a user account with the specified reason. Admin only.
+      operationId: suspendUser
+      x-micro-contracts-domain: AdminDomain
+      x-micro-contracts-method: suspendUser
+      x-middleware:
+        - requireAuth
+        - requireAdmin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Bearer token for authentication
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuspendUserRequest'
+      responses:
+        '200':
+          description: User suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Unauthorized
+        '403':
+          $ref: ../../../../spec/_shared/openapi/problem-details.yaml#/components/responses/Forbidden
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check the health status of the service. No authentication required.
+      operationId: healthCheck
+      x-micro-contracts-domain: HealthDomain
+      x-micro-contracts-method: check
+      x-micro-contracts-published: true
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+      parameters:
+        - name: X-Correlation-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Correlation ID for distributed tracing.
+            If not provided, server will generate one.
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - name
+        - role
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum:
+            - user
+            - admin
+        status:
+          type: string
+          enum:
+            - active
+            - suspended
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        internalNotes:
+          type: string
+          x-micro-contracts-non-exportable: true
+    UserListResponse:
+      type: object
+      required:
+        - users
+        - total
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        total:
+          type: integer
+        hasMore:
+          type: boolean
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        role:
+          type: string
+          enum:
+            - user
+            - admin
+          default: user
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        role:
+          type: string
+          enum:
+            - user
+            - admin
+    TenantData:
+      type: object
+      required:
+        - id
+        - tenantId
+        - data
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        data:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+    CreateTenantDataRequest:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+    SystemStats:
+      type: object
+      required:
+        - userCount
+        - activeUsers
+        - tenantCount
+      properties:
+        userCount:
+          type: integer
+        activeUsers:
+          type: integer
+        tenantCount:
+          type: integer
+        uptime:
+          type: number
+          description: Uptime in seconds
+    SuspendUserRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 500
+    HealthStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - degraded
+            - unhealthy
+        version:
+          type: string
+        timestamp:
+          type: string
+          format: date-time

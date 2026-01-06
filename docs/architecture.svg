@@ -1,0 +1,226 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 870">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrowhead-teal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#0d9488"/>
+    </marker>
+    <pattern id="stripe" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#e2e8f0" stroke-width="4"/>
+    </pattern>
+  </defs>
+  
+  <style>
+    .title { font: bold 13px 'Segoe UI', system-ui, sans-serif; fill: white; }
+    .title-dark { font: bold 13px 'Segoe UI', system-ui, sans-serif; fill: #1e293b; }
+    .subtitle { font: 11px 'Segoe UI', system-ui, sans-serif; fill: rgba(255,255,255,0.85); }
+    .item { font: 10px 'Segoe UI', system-ui, sans-serif; fill: #334155; }
+    .item-small { font: 9px 'Segoe UI', system-ui, sans-serif; fill: #64748b; }
+    .label { font: 10px 'Segoe UI', system-ui, sans-serif; fill: #64748b; }
+    .section-label { font: bold 11px 'Segoe UI', system-ui, sans-serif; fill: #475569; }
+  </style>
+
+  <!-- Background -->
+  <rect width="950" height="850" fill="#f8fafc"/>
+  
+  <!-- Title -->
+  <text x="475" y="30" text-anchor="middle" class="title-dark" style="font-size:16px;">Vertical Slice Architecture with micro-contracts</text>
+  
+  <!-- OpenAPI Layer -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="50" width="850" height="50" rx="8" fill="#5b21b6"/>
+  </g>
+  <text x="475" y="75" text-anchor="middle" class="title" style="font-size:14px;">📄 OpenAPI Specs (Single Source of Truth)</text>
+  <text x="475" y="92" text-anchor="middle" class="subtitle">core.yaml · users.yaml · notifications.yaml</text>
+  
+  <!-- Generate arrows -->
+  <path d="M 185 100 L 185 125" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 475 100 L 475 125" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 765 100 L 765 125" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="120" y="118" class="label">generate</text>
+  <text x="410" y="118" class="label">generate</text>
+  <text x="700" y="118" class="label">generate</text>
+
+  <!-- Contract Layer (3 boxes) -->
+  <!-- contract/core -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="130" width="270" height="60" rx="6" fill="white" stroke="#16a34a" stroke-width="2"/>
+    <rect x="50" y="130" width="270" height="28" rx="6" fill="#16a34a"/>
+    <rect x="50" y="152" width="270" height="6" rx="0" fill="#16a34a"/>
+  </g>
+  <text x="185" y="149" text-anchor="middle" class="title" style="font-size:12px;">📦 contract/core/</text>
+  <text x="60" y="175" class="item-small" style="fill:#16a34a;font-weight:600;">Shared between server ↔ frontend</text>
+  
+  <!-- contract/users -->
+  <g filter="url(#shadow)">
+    <rect x="340" y="130" width="270" height="60" rx="6" fill="white" stroke="#16a34a" stroke-width="2"/>
+    <rect x="340" y="130" width="270" height="28" rx="6" fill="#16a34a"/>
+    <rect x="340" y="152" width="270" height="6" rx="0" fill="#16a34a"/>
+  </g>
+  <text x="475" y="149" text-anchor="middle" class="title" style="font-size:12px;">📦 contract/users/</text>
+  <text x="350" y="175" class="item-small" style="fill:#16a34a;font-weight:600;">Shared between server ↔ frontend</text>
+  
+  <!-- contract/notifications -->
+  <g filter="url(#shadow)">
+    <rect x="630" y="130" width="270" height="60" rx="6" fill="white" stroke="#16a34a" stroke-width="2"/>
+    <rect x="630" y="130" width="270" height="28" rx="6" fill="#16a34a"/>
+    <rect x="630" y="152" width="270" height="6" rx="0" fill="#16a34a"/>
+  </g>
+  <text x="765" y="149" text-anchor="middle" class="title" style="font-size:12px;">📦 contract/notifications/</text>
+  <text x="640" y="175" class="item-small" style="fill:#16a34a;font-weight:600;">Intra-module types (server only)</text>
+
+  <!-- Extract arrows to contract-published -->
+  <path d="M 185 190 L 185 235" fill="none" stroke="#0d9488" stroke-width="2" marker-end="url(#arrowhead-teal)"/>
+  <path d="M 475 190 L 475 235" fill="none" stroke="#0d9488" stroke-width="2" marker-end="url(#arrowhead-teal)"/>
+  <text x="200" y="218" class="item-small" style="fill:#0d9488;">extract</text>
+  <text x="490" y="218" class="item-small" style="fill:#0d9488;">extract</text>
+  <text x="765" y="218" class="item-small" style="fill:#94a3b8;">no x-micro-contracts-published</text>
+
+  <!-- contract-published Layer -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="240" width="850" height="80" rx="8" fill="white" stroke="#0d9488" stroke-width="2"/>
+    <rect x="50" y="240" width="850" height="30" rx="8" fill="#0d9488"/>
+    <rect x="50" y="264" width="850" height="6" rx="0" fill="#0d9488"/>
+  </g>
+  <text x="475" y="260" text-anchor="middle" class="title" style="font-size:12px;">📦 packages/contract-published/ — Cross-module Shared Contracts (x-micro-contracts-published: true only)</text>
+  <text x="475" y="285" text-anchor="middle" class="item-small" style="fill:#0d9488;">Must maintain backward compatibility — Used for cross-module API calls</text>
+  
+  <rect x="120" y="297" width="130" height="16" rx="3" fill="#ccfbf1" stroke="#0d9488"/>
+  <text x="185" y="308" text-anchor="middle" class="item-small" style="fill:#0f766e;font-size:8px;">contract-published/core/</text>
+  
+  <rect x="410" y="297" width="130" height="16" rx="3" fill="#ccfbf1" stroke="#0d9488"/>
+  <text x="475" y="308" text-anchor="middle" class="item-small" style="fill:#0f766e;font-size:8px;">contract-published/users/</text>
+  
+  <rect x="700" y="297" width="130" height="16" rx="3" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="765" y="308" text-anchor="middle" class="item-small" style="fill:#94a3b8;font-size:8px;">(none)</text>
+
+  <!-- Vertical Slice 1: Core -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="370" width="270" height="295" rx="8" fill="white" stroke="#8b5cf6" stroke-width="2"/>
+    <rect x="50" y="370" width="270" height="35" rx="8" fill="#8b5cf6"/>
+    <rect x="50" y="399" width="270" height="6" rx="0" fill="#8b5cf6"/>
+  </g>
+  <text x="185" y="394" text-anchor="middle" class="title">🟣 core module</text>
+  
+  <!-- Core - Server -->
+  <rect x="65" y="420" width="240" height="85" rx="4" fill="#faf5ff" stroke="#c4b5fd"/>
+  <text x="185" y="438" text-anchor="middle" class="item" style="font-weight:600;">🖥️ server/src/core/</text>
+  <text x="75" y="458" class="item-small">▸ routes.generated.ts</text>
+  <text x="75" y="472" class="item-small">▸ domains/ (hand-code)</text>
+  <text x="75" y="486" class="item-small">▸ models/</text>
+  
+  <!-- Core - Frontend -->
+  <rect x="65" y="515" width="240" height="60" rx="4" fill="#f5f3ff" stroke="#c4b5fd"/>
+  <text x="185" y="533" text-anchor="middle" class="item" style="font-weight:600;">🌐 frontend/src/core/</text>
+  <text x="75" y="553" class="item-small">▸ api.generated.ts</text>
+  <text x="75" y="565" class="item-small">▸ ui/ (hand-code)</text>
+  
+  <!-- Core - Deploy info -->
+  <rect x="65" y="585" width="240" height="28" rx="4" fill="#ede9fe" stroke="#a78bfa"/>
+  <text x="185" y="603" text-anchor="middle" class="item-small" style="fill:#6d28d9;">Deploy: api-server + web-app</text>
+  
+  <!-- Core - imports note -->
+  <text x="185" y="635" text-anchor="middle" class="item-small" style="fill:#16a34a;">imports: contract/core/</text>
+  <text x="185" y="650" text-anchor="middle" class="item-small" style="fill:#16a34a;">(server ↔ frontend shared)</text>
+
+  <!-- Vertical Slice 2: Users -->
+  <g filter="url(#shadow)">
+    <rect x="340" y="370" width="270" height="295" rx="8" fill="white" stroke="#f97316" stroke-width="2"/>
+    <rect x="340" y="370" width="270" height="35" rx="8" fill="#f97316"/>
+    <rect x="340" y="399" width="270" height="6" rx="0" fill="#f97316"/>
+  </g>
+  <text x="475" y="394" text-anchor="middle" class="title">🟠 users module</text>
+  
+  <!-- Users - Server -->
+  <rect x="355" y="420" width="240" height="85" rx="4" fill="#fff7ed" stroke="#fdba74"/>
+  <text x="475" y="438" text-anchor="middle" class="item" style="font-weight:600;">🖥️ server/src/users/</text>
+  <text x="365" y="458" class="item-small">▸ routes.generated.ts</text>
+  <text x="365" y="472" class="item-small">▸ domains/ (hand-code)</text>
+  <text x="365" y="486" class="item-small">▸ models/</text>
+  
+  <!-- Users - Frontend -->
+  <rect x="355" y="515" width="240" height="60" rx="4" fill="#ffedd5" stroke="#fdba74"/>
+  <text x="475" y="533" text-anchor="middle" class="item" style="font-weight:600;">🌐 frontend/src/users/</text>
+  <text x="365" y="553" class="item-small">▸ api.generated.ts</text>
+  <text x="365" y="565" class="item-small">▸ ui/ (hand-code)</text>
+  
+  <!-- Users - Deploy info -->
+  <rect x="355" y="585" width="240" height="28" rx="4" fill="#fed7aa" stroke="#fb923c"/>
+  <text x="475" y="603" text-anchor="middle" class="item-small" style="fill:#c2410c;">Deploy: same or separate</text>
+  
+  <!-- Users - imports note -->
+  <text x="475" y="635" text-anchor="middle" class="item-small" style="fill:#16a34a;">imports: contract/users/</text>
+  <text x="475" y="650" text-anchor="middle" class="item-small" style="fill:#0d9488;">+ contract-published/core/ (cross-module)</text>
+
+  <!-- Vertical Slice 3: Notifications -->
+  <g filter="url(#shadow)">
+    <rect x="630" y="370" width="270" height="295" rx="8" fill="white" stroke="#06b6d4" stroke-width="2"/>
+    <rect x="630" y="370" width="270" height="35" rx="8" fill="#06b6d4"/>
+    <rect x="630" y="399" width="270" height="6" rx="0" fill="#06b6d4"/>
+  </g>
+  <text x="765" y="394" text-anchor="middle" class="title">🔵 notifications module</text>
+  
+  <!-- Notifications - Server only -->
+  <rect x="645" y="420" width="240" height="85" rx="4" fill="#ecfeff" stroke="#67e8f9"/>
+  <text x="765" y="438" text-anchor="middle" class="item" style="font-weight:600;">🖥️ notification-service/</text>
+  <text x="655" y="458" class="item-small">▸ routes.generated.ts</text>
+  <text x="655" y="472" class="item-small">▸ domains/ (hand-code)</text>
+  <text x="655" y="486" class="item-small">▸ models/</text>
+  
+  <!-- Notifications - No Frontend -->
+  <rect x="645" y="515" width="240" height="60" rx="4" fill="url(#stripe)" stroke="#94a3b8"/>
+  <text x="765" y="550" text-anchor="middle" class="item-small" style="fill:#94a3b8;">No frontend (API-only)</text>
+  
+  <!-- Notifications - Deploy info -->
+  <rect x="645" y="585" width="240" height="28" rx="4" fill="#cffafe" stroke="#22d3ee"/>
+  <text x="765" y="603" text-anchor="middle" class="item-small" style="fill:#0e7490;">Deploy: separate microservice</text>
+  
+  <!-- Notifications - imports note -->
+  <text x="765" y="635" text-anchor="middle" class="item-small" style="fill:#16a34a;">imports: contract/notifications/</text>
+  <text x="765" y="650" text-anchor="middle" class="item-small" style="fill:#0d9488;">+ contract-published/core/ (cross-module)</text>
+
+  <!-- Intra-module import arrows: contract/{module} → same module (BLUE) -->
+  <path d="M 100 190 L 100 370" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowhead-blue)"/>
+  <path d="M 390 190 L 390 370" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowhead-blue)"/>
+  <path d="M 680 190 L 680 370" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowhead-blue)"/>
+  <text x="108" y="218" class="item-small" style="fill:#3b82f6;">import</text>
+  <text x="398" y="218" class="item-small" style="fill:#3b82f6;">import</text>
+  <text x="688" y="218" class="item-small" style="fill:#3b82f6;">import</text>
+
+  <!-- Cross-module import arrows: contract-published → other modules (TEAL dashed) -->
+  <path d="M 185 313 L 420 370" fill="none" stroke="#0d9488" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <path d="M 185 313 L 700 370" fill="none" stroke="#0d9488" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+  <!-- Section Label (below modules) -->
+  <text x="475" y="685" text-anchor="middle" class="section-label">↑ Vertical Slices (Feature-aligned Modules)</text>
+
+  <!-- Legend -->
+  <g transform="translate(50, 710)">
+    <rect width="850" height="50" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/>
+    <text x="20" y="30" class="section-label">Legend:</text>
+    
+    <line x1="120" y1="27" x2="155" y2="27" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowhead-blue)"/>
+    <text x="165" y="30" class="item">intra-module import</text>
+    
+    <line x1="340" y1="27" x2="375" y2="27" stroke="#0d9488" stroke-width="2" marker-end="url(#arrowhead-teal)"/>
+    <text x="385" y="30" class="item">extract (x-micro-contracts-published)</text>
+    
+    <line x1="540" y1="27" x2="575" y2="27" stroke="#0d9488" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="585" y="30" class="item">cross-module import</text>
+  </g>
+  
+  <!-- Key insight callout -->
+  <g transform="translate(50, 775)">
+    <rect width="850" height="65" rx="6" fill="#fefce8" stroke="#facc15"/>
+    <text x="20" y="22" class="item" style="font-weight:600;fill:#854d0e;">💡 Key Insight:</text>
+    <text x="20" y="40" class="item" style="fill:#713f12;">contract/ = intra-module shared types (server ↔ frontend), can change freely</text>
+    <text x="20" y="55" class="item" style="fill:#713f12;">contract-published/ = cross-module shared types (x-micro-contracts-published: true only), must maintain backward compatibility</text>
+  </g>
+</svg>

@@ -1,0 +1,956 @@
+/**
+ * micro-contracts Generator
+ */
+
+import fs from 'fs';
+import path from 'path';
+import yaml from 'js-yaml';
+import type { 
+  OpenAPISpec, 
+  GeneratorConfig, 
+  MultiModuleConfig, 
+  ResolvedModuleConfig,
+} from '../types.js';
+import { 
+  isMultiModuleConfig, 
+  resolveModuleConfig,
+} from '../types.js';
+import { generateTypes } from './typeGenerator.js';
+import { generateSchemas } from './schemaGenerator.js';
+import { generateDomainInterfaces } from './domainGenerator.js';
+import { lintSpec, formatLintResults } from './linter.js';
+import { 
+  processOverlays, 
+  generateExtensionInterfaces,
+  formatOverlayLog,
+  rebaseRefs,
+  type OverlayResult,
+} from './overlayProcessor.js';
+import { 
+  buildTemplateContext, 
+  generateWithTemplate,
+  loadTemplateWithResolution,
+  resolveTemplatePath,
+} from './templateProcessor.js';
+import {
+  generateDepsFiles,
+  writeDepsFiles,
+  validateDependsOn,
+} from './dependencyGenerator.js';
+import { extractDependencies, expandPlaceholders } from '../types.js';
+
+export { generateTypes } from './typeGenerator.js';
+export { generateSchemas } from './schemaGenerator.js';
+export { generateDomainInterfaces } from './domainGenerator.js';
+export { lintSpec, formatLintResults } from './linter.js';
+export { processOverlays, generateExtensionInterfaces } from './overlayProcessor.js';
+export { buildTemplateContext, generateWithTemplate } from './templateProcessor.js';
+
+/**
+ * Write file only if content has changed (ignoring timestamp in header).
+ * This prevents unnecessary git diffs when only the timestamp changes.
+ * Returns true if file was written, false if content was unchanged.
+ */
+function writeFileIfChanged(filePath: string, newContent: string): boolean {
+  // Resolve to absolute path for consistency
+  const absolutePath = path.resolve(filePath);
+  if (fs.existsSync(absolutePath)) {
+    const existingContent = fs.readFileSync(absolutePath, 'utf-8');
+    if (existingContent === newContent) {
+      return false; // No change, skip writing
+    }
+  }
+  fs.writeFileSync(absolutePath, newContent);
+  return true;
+}
+
+/**
+ * Write file and log result. Uses writeFileIfChanged to avoid unnecessary updates.
+ */
+function writeAndLog(filePath: string, content: string, indent = '    '): void {
+  const written = writeFileIfChanged(filePath, content);
+  if (written) {
+    console.log(`${indent}Written: ${filePath}`);
+  } else {
+    console.log(`${indent}Unchanged: ${filePath}`);
+  }
+}
+
+export interface GenerateOptions {
+  /** Generate contract package only */
+  contractsOnly?: boolean;
+  /** Generate server routes only */
+  serverOnly?: boolean;
+  /** Generate frontend clients only */
+  frontendOnly?: boolean;
+  /** Generate documentation only */
+  docsOnly?: boolean;
+  /** Skip linting */
+  skipLint?: boolean;
+  /** Filter to specific modules (comma-separated or array) */
+  modules?: string | string[];
+}
+
+/**
+ * Load OpenAPI spec from file
+ */
+export function loadOpenAPISpec(filePath: string): OpenAPISpec {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  
+  if (filePath.endsWith('.yaml') || filePath.endsWith('.yml')) {
+    return yaml.load(content) as OpenAPISpec;
+  } else if (filePath.endsWith('.json')) {
+    return JSON.parse(content) as OpenAPISpec;
+  } else {
+    throw new Error(`Unsupported file format: ${filePath}`);
+  }
+}
+
+/**
+ * Load config from file (supports both legacy and multi-module formats)
+ */
+export function loadConfig(configPath: string): MultiModuleConfig | GeneratorConfig {
+  const content = fs.readFileSync(configPath, 'utf-8');
+  return yaml.load(content) as MultiModuleConfig | GeneratorConfig;
+}
+
+/**
+ * Parse module filter from options
+ */
+function parseModuleFilter(modules?: string | string[]): string[] | null {
+  if (!modules) return null;
+  if (Array.isArray(modules)) return modules;
+  return modules.split(',').map(m => m.trim()).filter(Boolean);
+}
+
+/**
+ * Generate all files from config
+ */
+export async function generate(
+  config: MultiModuleConfig | GeneratorConfig,
+  options: GenerateOptions = {}
+): Promise<void> {
+  // Handle multi-module config
+  if (isMultiModuleConfig(config)) {
+    await generateMultiModule(config, options);
+    return;
+  }
+  
+  // Legacy single-module config is no longer supported
+  throw new Error(
+    'Legacy single-module configuration format is no longer supported. ' +
+    'Please migrate to the multi-module format with a "modules:" section. ' +
+    'See README.md for configuration examples.'
+  );
+}
+
+/**
+ * Generate for multi-module config
+ */
+async function generateMultiModule(
+  config: MultiModuleConfig,
+  options: GenerateOptions
+): Promise<void> {
+  const moduleFilter = parseModuleFilter(options.modules);
+  const moduleNames = Object.keys(config.modules);
+  
+  // Filter modules if specified
+  const targetModules = moduleFilter 
+    ? moduleNames.filter(m => moduleFilter.includes(m))
+    : moduleNames;
+  
+  if (targetModules.length === 0) {
+    if (moduleFilter) {
+      console.error(`No matching modules found. Available: ${moduleNames.join(', ')}`);
+      process.exit(1);
+    }
+    console.log('No modules defined in config.');
+    return;
+  }
+  
+  console.log(`Generating for modules: ${targetModules.join(', ')}`);
+  
+  // Generate each module
+  for (const moduleName of targetModules) {
+    const moduleConfig = config.modules[moduleName];
+    const resolved = resolveModuleConfig(moduleName, moduleConfig, config.defaults);
+    
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`Module: ${moduleName}`);
+    console.log(`${'='.repeat(60)}`);
+    
+    await generateModule(resolved, options);
+  }
+  
+  console.log('\nGeneration complete!');
+}
+
+/**
+ * Generate for a single resolved module
+ */
+async function generateModule(
+  config: ResolvedModuleConfig,
+  options: GenerateOptions
+): Promise<void> {
+  // Load OpenAPI spec
+  const openapiPath = path.resolve(config.openapi);
+  console.log(`Loading OpenAPI spec from: ${openapiPath}`);
+  
+  if (!fs.existsSync(openapiPath)) {
+    throw new Error(`OpenAPI spec not found: ${openapiPath}`);
+  }
+  
+  let spec = loadOpenAPISpec(openapiPath);
+  console.log(`  Title: ${spec.info.title}`);
+  console.log(`  Version: ${spec.info.version}`);
+
+  // Run linting first (unless skipped)
+  if (!options.skipLint) {
+    console.log('\nLinting OpenAPI spec...');
+    const lintResult = lintSpec(spec);
+    console.log(formatLintResults(lintResult));
+    
+    if (!lintResult.valid) {
+      throw new Error('Lint failed. Fix errors before generating.');
+    }
+  }
+
+  // Apply overlays if configured
+  let overlayResult: OverlayResult | null = null;
+  if (config.overlays.length > 0) {
+    console.log('\nApplying overlays...');
+    overlayResult = processOverlays(
+      spec,
+      {
+        collision: config.overlayCollision,
+        files: config.overlays,
+      },
+      process.cwd(),
+      openapiPath  // Pass spec path for $ref rebasing
+    );
+    spec = overlayResult.spec;
+    console.log(formatOverlayLog(overlayResult));
+    // Note: Transformed spec is written to packages/contract/*/docs/openapi.generated.yaml
+  }
+
+  const generateAll = !options.contractsOnly && !options.serverOnly && 
+                      !options.frontendOnly && !options.docsOnly;
+
+  // Validate and generate dependencies
+  const dependencies = extractDependencies(spec);
+  if (config.dependsOn) {
+    const validation = validateDependsOn(
+      dependencies.allDeps.map(d => d.raw),
+      config.dependsOn,
+      config.name
+    );
+    if (!validation.valid) {
+      for (const err of validation.errors) {
+        console.error(`ERROR: ${err}`);
+      }
+      throw new Error('Dependency validation failed');
+    }
+  }
+
+  // Generate contract package
+  if (generateAll || options.contractsOnly) {
+    await generateContractPackage(spec, config, false, overlayResult);
+    
+    // Generate public contract if there are public endpoints
+    if (hasPublicEndpoints(spec)) {
+      await generateContractPackage(spec, config, true, overlayResult);
+    }
+    
+    // Generate deps/ re-exports if module has dependencies
+    if (dependencies.allDeps.length > 0) {
+      await generateDepsReExports(config, dependencies);
+    }
+  }
+
+  // Generate using new outputs system if configured
+  if (config.outputs.length > 0) {
+    await generateFromOutputs(spec, config, overlayResult, options);
+  } else {
+    // Fallback to legacy server/frontend generation
+    // Generate server routes
+    if ((generateAll || options.serverOnly) && config.server) {
+      await generateServerRoutes(spec, config, overlayResult);
+    }
+
+    // Generate frontend clients
+    if ((generateAll || options.frontendOnly) && config.frontend) {
+      await generateFrontendClient(spec, config, overlayResult);
+    }
+  }
+
+  // Generate documentation
+  if ((generateAll || options.docsOnly) && config.docs.enabled) {
+    const docsDir = path.join(config.contractOutput, 'docs');
+    const openapiFile = path.join(docsDir, 'openapi.generated.yaml');
+    await generateDocumentation(openapiFile, docsDir);
+    
+    // Also generate for public contract if exists
+    if (hasPublicEndpoints(spec)) {
+      const publicDocsDir = path.join(config.contractPublicOutput, 'docs');
+      const publicOpenapiFile = path.join(publicDocsDir, 'openapi.generated.yaml');
+      if (fs.existsSync(publicOpenapiFile)) {
+        await generateDocumentation(publicOpenapiFile, publicDocsDir);
+      }
+    }
+  }
+}
+
+/**
+ * Check if spec has any public endpoints
+ */
+function hasPublicEndpoints(spec: OpenAPISpec): boolean {
+  for (const pathItem of Object.values(spec.paths)) {
+    for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
+      const operation = pathItem[method];
+      if (operation && (operation as unknown as Record<string, unknown>)['x-micro-contracts-published'] === true) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Generate contract package
+ */
+async function generateContractPackage(
+  spec: OpenAPISpec,
+  config: ResolvedModuleConfig,
+  publicOnly: boolean,
+  overlayResult: OverlayResult | null = null
+): Promise<void> {
+  const outputDir = publicOnly ? config.contractPublicOutput : config.contractOutput;
+  const label = publicOnly ? 'public contract' : 'contract';
+  
+  console.log(`\nGenerating ${label} package...`);
+  
+  // For public contract, use filtered spec
+  const targetSpec = publicOnly ? filterPublicSpec(spec) : spec;
+  
+  // Create directories
+  const dirs = [
+    outputDir,
+    path.join(outputDir, 'domains'),
+    path.join(outputDir, 'schemas'),
+    path.join(outputDir, 'errors'),
+    path.join(outputDir, 'docs'),
+  ];
+  
+  for (const dir of dirs) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  
+  // Note: We no longer delete files before generating to enable change detection.
+  // Orphaned files from removed domains/schemas should be manually cleaned up.
+  
+  // Generate domain interfaces
+  console.log(`  Generating domain interfaces...`);
+  const domainInterfaces = generateDomainInterfaces(targetSpec, { publicOnly });
+  for (const [name, content] of domainInterfaces) {
+    const fileName = name === 'index' ? 'index.ts' : `${name}Api.ts`;
+    const filePath = path.join(outputDir, 'domains', fileName);
+    writeAndLog(filePath, content);
+  }
+  
+  // Generate types (use filtered spec for public)
+  console.log(`  Generating schema types...`);
+  const typesContent = generateTypes(targetSpec);
+  const typesPath = path.join(outputDir, 'schemas', 'types.ts');
+  writeAndLog(typesPath, typesContent);
+  
+  // Generate validators (JSON Schemas) - use filtered spec for public
+  console.log(`  Generating validators...`);
+  const validatorsContent = generateSchemas(targetSpec);
+  const validatorsPath = path.join(outputDir, 'schemas', 'validators.ts');
+  writeAndLog(validatorsPath, validatorsContent);
+  
+  // Generate schemas index
+  const schemasIndex = `/**
+ * Schema exports
+ * Auto-generated - DO NOT EDIT
+ */
+
+export * from './types.js';
+export { allSchemas } from './validators.js';
+`;
+  writeAndLog(path.join(outputDir, 'schemas', 'index.ts'), schemasIndex);
+  
+  // Generate errors
+  const hasEndpoints = Object.keys(targetSpec.paths).length > 0;
+  console.log(`  Generating error types...`);
+  const errorsContent = hasEndpoints ? generateErrors() : generateEmptyErrors();
+  writeAndLog(path.join(outputDir, 'errors', 'index.ts'), errorsContent);
+  
+  // Generate overlay interfaces if overlays were applied
+  if (overlayResult && overlayResult.extensionInfo.size > 0 && !publicOnly) {
+    console.log(`  Generating overlay interfaces...`);
+    const overlaysDir = path.join(outputDir, 'overlays');
+    fs.mkdirSync(overlaysDir, { recursive: true });
+    
+    const overlayContent = generateExtensionInterfaces(overlayResult.extensionInfo);
+    const overlayPath = path.join(overlaysDir, 'index.ts');
+    writeAndLog(overlayPath, overlayContent);
+  }
+  
+  // Generate package index
+  const hasOverlays = overlayResult && overlayResult.extensionInfo.size > 0 && !publicOnly;
+  const indexContent = `/**
+ * ${publicOnly ? 'Public ' : ''}Contract Package
+ * Auto-generated - DO NOT EDIT
+ */
+
+export * from './domains/index.js';
+export * from './schemas/index.js';
+export * from './errors/index.js';
+${hasOverlays ? "export * from './overlays/index.js';" : ''}
+`;
+  writeAndLog(path.join(outputDir, 'index.ts'), indexContent);
+  
+  // Copy OpenAPI spec to docs with source info header
+  // Rebase $ref paths from source directory to output directory
+  const sourceDir = path.dirname(config.openapi);
+  const docsDir = path.join(outputDir, 'docs');
+  const rebasedSpec = rebaseRefs(targetSpec, sourceDir, docsDir);
+  
+  const specHeader = `# Auto-generated OpenAPI specification
+# DO NOT EDIT MANUALLY
+# 
+# Source: ${config.openapi}
+# Regenerate: micro-contracts generate
+${publicOnly ? '# Filtered for public endpoints only\n' : ''}
+`;
+  const yamlContent = specHeader + yaml.dump(rebasedSpec, { lineWidth: -1 });
+  writeAndLog(path.join(docsDir, 'openapi.generated.yaml'), yamlContent);
+}
+
+/**
+ * Generate using flexible outputs configuration
+ */
+async function generateFromOutputs(
+  spec: OpenAPISpec,
+  config: ResolvedModuleConfig,
+  overlayResult: OverlayResult | null,
+  options: GenerateOptions
+): Promise<void> {
+  const generateAll = !options.contractsOnly && !options.serverOnly && 
+                      !options.frontendOnly && !options.docsOnly;
+  
+  console.log(`\nGenerating from outputs configuration...`);
+  
+  const hasPublic = hasPublicEndpoints(spec);
+  
+  for (const output of config.outputs) {
+    // Skip disabled outputs
+    if (!output.enabled) continue;
+    
+    // Check conditions
+    if (output.condition === 'hasPublicEndpoints' && !hasPublic) {
+      console.log(`  Skipping ${output.id} (no public endpoints)`);
+      continue;
+    }
+    
+    const hasOverlays = overlayResult && overlayResult.extensionInfo.size > 0;
+    if (output.condition === 'hasOverlays' && !hasOverlays) {
+      console.log(`  Skipping ${output.id} (no overlays)`);
+      continue;
+    }
+    
+    // Filter by generation type
+    const isServerOutput = output.id.includes('server');
+    const isFrontendOutput = output.id.includes('frontend') || output.id.includes('client');
+    
+    if (options.serverOnly && !isServerOutput) continue;
+    if (options.frontendOnly && !isFrontendOutput) continue;
+    if (!generateAll && !options.serverOnly && !options.frontendOnly) continue;
+    
+    // Check if file exists and overwrite is disabled
+    if (!output.overwrite && fs.existsSync(output.output)) {
+      console.log(`  Skipping ${output.id} (file exists, overwrite=false)`);
+      continue;
+    }
+    
+    console.log(`  Generating ${output.id}...`);
+    
+    try {
+      // Build template context with output-specific config
+      // Expand {module} placeholders in config values
+      const expandPlaceholder = (val: string | undefined, fallback: string) => 
+        (val?.replace(/{module}/g, config.name) ?? fallback);
+      
+      const templateContext = buildTemplateContext(spec, config.name, {
+        domainsPath: expandPlaceholder(output.config?.domainsPath as string | undefined, `fastify.domains.${config.name}`),
+        contractPackage: expandPlaceholder(output.config?.contractPackage as string | undefined, `@project/contract/${config.name}`),
+        extensionInfo: overlayResult?.extensionInfo,
+        appliedOverlays: overlayResult?.appliedOverlays,
+      });
+      
+      // Add output-specific config to context
+      const extendedContext = {
+        ...templateContext,
+        outputConfig: output.config || {},
+      };
+      
+      // Resolve and load template
+      const specDir = path.dirname(config.openapi).replace(/\/openapi$/, '').replace(`/${config.name}`, '');
+      const templatePath = resolveTemplatePath({
+        specDir,
+        moduleName: config.name,
+        templateName: path.basename(output.template),
+      }) || output.template;
+      
+      if (!fs.existsSync(templatePath)) {
+        console.warn(`    Warning: Template not found: ${output.template}`);
+        continue;
+      }
+      
+      const template = loadTemplateWithResolution({
+        specDir,
+        moduleName: config.name,
+        templateName: path.basename(output.template),
+      });
+      
+      const content = template(extendedContext);
+      
+      // Ensure output directory exists
+      const outputDir = path.dirname(output.output);
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      
+      // Write output file (only if content changed)
+      writeAndLog(output.output, content);
+      
+    } catch (error) {
+      console.error(`    Error generating ${output.id}:`, error instanceof Error ? error.message : error);
+    }
+  }
+}
+
+/**
+ * Generate deps/ re-exports for cross-module dependencies
+ */
+async function generateDepsReExports(
+  config: ResolvedModuleConfig,
+  dependencies: ReturnType<typeof extractDependencies>
+): Promise<void> {
+  if (dependencies.allDeps.length === 0) {
+    console.log(`\n  No dependencies declared, skipping deps/ generation`);
+    return;
+  }
+  
+  console.log(`\nGenerating deps/ re-exports...`);
+  
+  // Build contract-published paths map
+  const contractPublicPaths = new Map<string, string>();
+  
+  // Group deps by module
+  const moduleNames = new Set<string>();
+  for (const dep of dependencies.allDeps) {
+    moduleNames.add(dep.module);
+  }
+  
+  for (const moduleName of moduleNames) {
+    // Assume contract-published follows same pattern as config
+    contractPublicPaths.set(moduleName, `@project/contract-published/${moduleName}`);
+  }
+  
+  // Generate deps files directly from already-extracted dependencies
+  const generatedFiles = generateSimpleDepsFiles(config.name, dependencies, contractPublicPaths);
+  
+  for (const file of generatedFiles) {
+    const dir = path.dirname(file.path);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    writeAndLog(file.path, file.content, '  ');
+  }
+}
+
+/**
+ * Generate simple deps files without complex type resolution
+ */
+function generateSimpleDepsFiles(
+  moduleName: string,
+  dependencies: ReturnType<typeof extractDependencies>,
+  _contractPublicPaths: Map<string, string>
+): Array<{ path: string; content: string }> {
+  const files: Array<{ path: string; content: string }> = [];
+  
+  // Group deps by target module
+  const depsByModule = new Map<string, Array<{ domain: string; method: string; raw: string }>>();
+  
+  for (const dep of dependencies.allDeps) {
+    if (!depsByModule.has(dep.module)) {
+      depsByModule.set(dep.module, []);
+    }
+    depsByModule.get(dep.module)!.push({
+      domain: dep.domain,
+      method: dep.method,
+      raw: dep.raw,
+    });
+  }
+  
+  // Generate file for each target module
+  for (const [targetModule, deps] of depsByModule) {
+    // Use relative path from packages/contract/{module}/deps/ to packages/contract-published/{target}/
+    // From packages/contract/{module}/deps/ to packages/contract-published/{target}/
+    // ../../../contract-published/{target}/
+    const relativePathPrefix = `../../../contract-published/${targetModule}`;
+    
+    const content = `/**
+ * Auto-generated from x-micro-contracts-depend-on - DO NOT EDIT
+ * Source module: ${moduleName}
+ * Target module: ${targetModule}
+ * Dependencies: ${deps.map(d => d.raw).join(', ')}
+ */
+
+// Re-exported types from ${targetModule} (contract-published)
+export type * from '${relativePathPrefix}/schemas/types.js';
+export type * from '${relativePathPrefix}/domains/index.js';
+`;
+    
+    files.push({
+      path: `packages/contract/${moduleName}/deps/${targetModule}.ts`,
+      content,
+    });
+  }
+  
+  // Generate index file
+  if (files.length > 0) {
+    const indexContent = `/**
+ * Auto-generated deps index - DO NOT EDIT
+ */
+
+${Array.from(depsByModule.keys()).map(m => `export * from './${m}.js';`).join('\n')}
+`;
+    
+    files.push({
+      path: `packages/contract/${moduleName}/deps/index.ts`,
+      content: indexContent,
+    });
+  }
+  
+  return files;
+}
+
+/**
+ * Generate server routes
+ */
+async function generateServerRoutes(
+  spec: OpenAPISpec,
+  config: ResolvedModuleConfig,
+  overlayResult: OverlayResult | null = null
+): Promise<void> {
+  if (!config.server) return;
+  
+  const outputDir = path.resolve(config.server.output);
+  const routesFile = config.server.routes;
+  
+  console.log(`\nGenerating server routes...`);
+  fs.mkdirSync(outputDir, { recursive: true });
+  
+  // Template is required for server routes generation
+  if (!config.server.template) {
+    throw new Error('Server template is required. Please specify server.template in your config.');
+  }
+  
+  const templateContext = buildTemplateContext(spec, config.name, {
+    domainsPath: config.server.domainsPath,
+    contractPackage: `@project/contract/${config.name}`,
+    extensionInfo: overlayResult?.extensionInfo,
+    appliedOverlays: overlayResult?.appliedOverlays,
+  });
+  const routesContent = generateWithTemplate(
+    config.server.template,
+    'server',
+    templateContext
+  );
+  
+  const routesPath = path.join(outputDir, routesFile);
+  writeAndLog(routesPath, routesContent, '  ');
+}
+
+/**
+ * Generate frontend client
+ */
+async function generateFrontendClient(
+  spec: OpenAPISpec,
+  config: ResolvedModuleConfig,
+  overlayResult: OverlayResult | null = null
+): Promise<void> {
+  if (!config.frontend) return;
+  
+  const outputDir = path.resolve(config.frontend.output);
+  const clientFile = config.frontend.client;
+  
+  console.log(`\nGenerating frontend client...`);
+  fs.mkdirSync(outputDir, { recursive: true });
+  
+  // Template is required for frontend client generation
+  if (!config.frontend.template) {
+    throw new Error('Frontend template is required. Please specify frontend.template in your config.');
+  }
+  
+  const templateContext = buildTemplateContext(spec, config.name, {
+    contractPackage: `@project/contract/${config.name}`,
+    extensionInfo: overlayResult?.extensionInfo,
+    appliedOverlays: overlayResult?.appliedOverlays,
+  });
+  const clientContent = generateWithTemplate(
+    config.frontend.template,
+    'frontend',
+    templateContext
+  );
+  
+  const clientPath = path.join(outputDir, clientFile);
+  writeAndLog(clientPath, clientContent, '  ');
+  
+  // Generate domain re-exports
+  const domainContent = generateDomainReExports(config.name);
+  const domainPath = path.join(outputDir, config.frontend.domain);
+  writeAndLog(domainPath, domainContent, '  ');
+}
+
+/**
+ * Generate domain re-exports file
+ */
+function generateDomainReExports(moduleName: string): string {
+  const lines: string[] = [];
+  
+  lines.push('/**');
+  lines.push(' * Domain re-exports');
+  lines.push(' * Auto-generated - DO NOT EDIT');
+  lines.push(' */');
+  lines.push('');
+  
+  // Re-export API clients from api.generated
+  lines.push('// API clients');
+  lines.push("export * from './api.generated';");
+  lines.push('');
+  
+  // Re-export types from contract package
+  lines.push('// Contract types');
+  lines.push(`export * from '@project/contract/${moduleName}/schemas';`);
+  lines.push(`export * from '@project/contract/${moduleName}/domains';`);
+  lines.push(`export * from '@project/contract/${moduleName}/errors';`);
+  lines.push('');
+  
+  return lines.join('\n');
+}
+
+/**
+ * Generate documentation (Redoc HTML)
+ */
+async function generateDocumentation(
+  openapiPath: string,
+  outputDir: string
+): Promise<void> {
+  const { execSync } = await import('child_process');
+  const htmlPath = path.join(outputDir, 'api-reference.html');
+  
+  try {
+    console.log(`  Generating Redoc HTML...`);
+    execSync(`npx @redocly/cli build-docs "${openapiPath}" -o "${htmlPath}"`, {
+      stdio: 'pipe',
+    });
+    console.log(`    Written: ${htmlPath}`);
+  } catch (error) {
+    console.log(`  Warning: Redoc HTML generation failed. Install @redocly/cli if needed.`);
+    console.log(`    Run: npx @redocly/cli build-docs "${openapiPath}" -o "${htmlPath}"`);
+  }
+}
+
+/**
+ * Generate error types
+ */
+function generateErrors(): string {
+  return `/**
+ * Error types
+ * Auto-generated - DO NOT EDIT
+ */
+
+// Re-export ProblemDetails from schemas (RFC 9457)
+export type { ProblemDetails, ValidationError } from '../schemas/types.js';
+import type { ProblemDetails } from '../schemas/types.js';
+
+/**
+ * API Error wrapper
+ */
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly problem: ProblemDetails,
+    public readonly requestId?: string,
+  ) {
+    super(problem.title);
+    this.name = 'ApiError';
+  }
+
+  get isValidationError(): boolean {
+    return this.status === 400;
+  }
+
+  get isNotFound(): boolean {
+    return this.status === 404;
+  }
+
+  get isServerError(): boolean {
+    return this.status >= 500;
+  }
+}
+`;
+}
+
+/**
+ * Generate empty error types (when no endpoints exist)
+ */
+function generateEmptyErrors(): string {
+  return `/**
+ * Error types
+ * Auto-generated - DO NOT EDIT
+ * 
+ * No endpoints defined - error types not needed.
+ */
+`;
+}
+
+/**
+ * Filter OpenAPI spec for public endpoints only
+ */
+function filterPublicSpec(spec: OpenAPISpec): OpenAPISpec {
+  const filtered: OpenAPISpec = {
+    ...spec,
+    paths: {},
+    tags: [],
+    components: {
+      schemas: {},
+      responses: spec.components?.responses,
+      parameters: spec.components?.parameters,
+      requestBodies: spec.components?.requestBodies,
+    },
+  };
+  
+  // Collect all referenced schemas and tags from public endpoints
+  const usedSchemas = new Set<string>();
+  const usedTags = new Set<string>();
+  
+  // Filter paths to only include x-micro-contracts-published: true
+  for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
+    const filteredPathItem: typeof pathItem = {};
+    let hasPublicOperation = false;
+    
+    for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
+      const operation = pathItem[method];
+      if (operation && (operation as unknown as Record<string, unknown>)['x-micro-contracts-published'] === true) {
+        filteredPathItem[method] = operation;
+        hasPublicOperation = true;
+        
+        // Collect schema references from this operation
+        collectSchemaRefs(operation, usedSchemas);
+        
+        // Collect tags from this operation
+        if (operation.tags) {
+          for (const tag of operation.tags) {
+            usedTags.add(tag);
+          }
+        }
+      }
+    }
+    
+    if (hasPublicOperation) {
+      filtered.paths[pathKey] = filteredPathItem;
+    }
+  }
+  
+  // Recursively resolve schema references
+  const allUsedSchemas = resolveSchemaRefsRecursively(spec, usedSchemas);
+  
+  // Filter schemas to only include used ones
+  if (spec.components?.schemas) {
+    for (const [schemaName, schema] of Object.entries(spec.components.schemas)) {
+      if (allUsedSchemas.has(schemaName)) {
+        filtered.components!.schemas![schemaName] = schema;
+      }
+    }
+  }
+  
+  // Filter tags to only include used ones
+  if (spec.tags) {
+    filtered.tags = spec.tags.filter(tag => usedTags.has(tag.name));
+  }
+  
+  // Clean up empty components
+  if (Object.keys(filtered.components?.schemas || {}).length === 0) {
+    delete filtered.components?.schemas;
+  }
+  
+  // Clean up empty tags
+  if (filtered.tags?.length === 0) {
+    delete filtered.tags;
+  }
+  
+  return filtered;
+}
+
+/**
+ * Collect $ref references from an operation
+ */
+function collectSchemaRefs(obj: unknown, refs: Set<string>): void {
+  if (!obj || typeof obj !== 'object') return;
+  
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      collectSchemaRefs(item, refs);
+    }
+    return;
+  }
+  
+  const record = obj as Record<string, unknown>;
+  
+  // Check for $ref
+  if (typeof record['$ref'] === 'string') {
+    const ref = record['$ref'];
+    const match = ref.match(/#\/components\/schemas\/(.+)/);
+    if (match) {
+      refs.add(match[1]);
+    }
+  }
+  
+  // Recurse into nested objects
+  for (const value of Object.values(record)) {
+    collectSchemaRefs(value, refs);
+  }
+}
+
+/**
+ * Recursively resolve schema references (schemas can reference other schemas)
+ */
+function resolveSchemaRefsRecursively(spec: OpenAPISpec, initialRefs: Set<string>): Set<string> {
+  const allRefs = new Set<string>(initialRefs);
+  const toProcess = [...initialRefs];
+  
+  while (toProcess.length > 0) {
+    const schemaName = toProcess.pop()!;
+    const schema = spec.components?.schemas?.[schemaName];
+    if (!schema) continue;
+    
+    // Collect refs from this schema
+    const nestedRefs = new Set<string>();
+    collectSchemaRefs(schema, nestedRefs);
+    
+    // Add new refs to process
+    for (const ref of nestedRefs) {
+      if (!allRefs.has(ref)) {
+        allRefs.add(ref);
+        toProcess.push(ref);
+      }
+    }
+  }
+  
+  return allRefs;
+}

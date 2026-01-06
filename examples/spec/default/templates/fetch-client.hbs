@@ -1,0 +1,92 @@
+/**
+ * Auto-generated HTTP Client from OpenAPI specification
+ * Generated from: {{title}} v{{version}}
+ * 
+ * DO NOT EDIT MANUALLY
+ * 
+ * Client API matches Domain API signature (single input object).
+ * Internally maps input to HTTP request (path params, query params, body).
+ */
+
+import type {
+{{#each domainTypes}}
+  {{this}},
+{{/each}}
+} from '{{contractPackage}}/domains';
+import type {
+{{#each schemaTypes}}
+  {{this}},
+{{/each}}
+} from '{{contractPackage}}/schemas';
+import { ApiError } from '{{contractPackage}}/errors';
+
+// BASE_URL derived from OpenAPI servers[0].url: {{baseUrl}}
+// Can be overridden via environment variable (Vite: VITE_API_BASE_URL)
+const BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '{{baseUrl}}';
+
+/**
+ * Handle HTTP response with typed error handling
+ */
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const problem = await res.json() as ProblemDetails;
+    throw new ApiError(
+      res.status,
+      problem,
+      res.headers.get('x-request-id') ?? undefined
+    );
+  }
+  // Handle 204 No Content and empty responses
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return undefined as T;
+  }
+  return res.json();
+}
+
+{{#each domains}}
+// ==========================================================================
+// {{name}} API Client
+// ==========================================================================
+export const {{key}}Api: {{name}}Api = {
+{{#each ../routes}}
+{{#if (eq domain ../name)}}
+  /**
+   * {{httpMethod}} {{path}}
+   {{#if summary}}* {{summary}}{{/if}}
+   {{#if isPublished}}* @published{{/if}}
+   */
+  async {{domainMethod}}(input: {{inputType}}): Promise<{{responseType}}> {
+{{#if queryParams.length}}
+    const searchParams = new URLSearchParams();
+{{#each queryParams}}
+    if (input.{{name}} !== undefined) searchParams.set('{{name}}', String(input.{{name}}));
+{{/each}}
+{{/if}}
+{{#if pathParams.length}}
+    const url = `${BASE_URL}{{clientUrlPatternInput}}`{{#if queryParams.length}} + (searchParams.toString() ? '?' + searchParams : ''){{/if}};
+{{else}}
+    const url = `${BASE_URL}{{path}}`{{#if queryParams.length}} + (searchParams.toString() ? '?' + searchParams : ''){{/if}};
+{{/if}}
+{{#if (eq httpMethod "GET")}}
+    const res = await fetch(url);
+{{else if requestType}}
+    const res = await fetch(url, {
+      method: '{{httpMethod}}',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input.data),
+    });
+{{else}}
+    const res = await fetch(url, { method: '{{httpMethod}}' });
+{{/if}}
+{{#if (eq responseType "void")}}
+    await handleResponse<void>(res);
+{{else}}
+    return handleResponse<{{responseType}}>(res);
+{{/if}}
+  },
+
+{{/if}}
+{{/each}}
+};
+
+{{/each}}

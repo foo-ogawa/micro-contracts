@@ -1,0 +1,58 @@
+# Common pagination schemas
+# Used across all modules for consistent pagination patterns
+
+components:
+  schemas:
+    PaginationParams:
+      type: object
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 100
+          description: Maximum number of items to return
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Number of items to skip
+
+    PaginatedResponse:
+      type: object
+      required:
+        - items
+        - total
+        - hasMore
+      properties:
+        items:
+          type: array
+          description: Array of items
+        total:
+          type: integer
+          description: Total number of items available
+        hasMore:
+          type: boolean
+          description: Whether more items exist beyond the current page
+
+    PageInfo:
+      type: object
+      required:
+        - total
+        - limit
+        - offset
+        - hasMore
+      properties:
+        total:
+          type: integer
+          description: Total number of items
+        limit:
+          type: integer
+          description: Current page size
+        offset:
+          type: integer
+          description: Current offset
+        hasMore:
+          type: boolean
+          description: Whether more pages exist
+

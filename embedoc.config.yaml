@@ -1,0 +1,19 @@
+# embedoc configuration for api_framework documentation
+# Automatically syncs source code from examples/ to README.md / docs/
+version: "1.0"
+
+# Target files
+targets:
+  - pattern: "./README.md"
+    comment_style: html
+  - pattern: "./docs/**/*.md"
+    comment_style: html
+
+# Embeds directory
+embeds_dir: "./embeds"
+
+# Output settings
+output:
+  encoding: utf-8
+  line_ending: lf
+

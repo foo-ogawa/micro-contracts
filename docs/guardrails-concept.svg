@@ -1,0 +1,252 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 1195" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e3a5f"/>
+      <stop offset="100%" style="stop-color:#2d5a87"/>
+    </linearGradient>
+    <linearGradient id="specLaneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#dbeafe"/>
+      <stop offset="100%" style="stop-color:#eff6ff"/>
+    </linearGradient>
+    <linearGradient id="implLaneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fee2e2"/>
+      <stop offset="100%" style="stop-color:#fef2f2"/>
+    </linearGradient>
+    <linearGradient id="generatorGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#a855f7"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="mergeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#22c55e"/>
+      <stop offset="100%" style="stop-color:#16a34a"/>
+    </linearGradient>
+    <linearGradient id="taskGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#67e8f9"/>
+      <stop offset="100%" style="stop-color:#22d3ee"/>
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+    <filter id="shadowSmall" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    
+    <!-- Arrow markers -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="1195" fill="#f8fafc"/>
+  
+  <!-- Header -->
+  <rect x="20" y="15" width="1060" height="70" rx="8" fill="url(#headerGrad)" filter="url(#shadow)"/>
+  <text x="550" y="45" text-anchor="middle" fill="white" font-size="22" font-weight="600">AI-Driven Development Guardrails</text>
+  <text x="550" y="68" text-anchor="middle" fill="#94a3b8" font-size="13">Contract-first quality gates for TypeScript API development</text>
+
+  <!-- Two-Lane Headers -->
+  <rect x="20" y="100" width="530" height="35" rx="6" fill="#3b82f6"/>
+  <text x="285" y="123" text-anchor="middle" fill="white" font-size="14" font-weight="600">Spec Level (Contract Verification)</text>
+  
+  <rect x="550" y="100" width="530" height="35" rx="6" fill="#ef4444"/>
+  <text x="815" y="123" text-anchor="middle" fill="white" font-size="14" font-weight="600">Implementation Level (Code Verification)</text>
+
+  <!-- Lane backgrounds -->
+  <rect x="20" y="135" width="530" height="770" rx="0 0 8 8" fill="url(#specLaneGrad)" stroke="#93c5fd" stroke-width="1"/>
+  <rect x="550" y="135" width="530" height="770" rx="0 0 8 8" fill="url(#implLaneGrad)" stroke="#fca5a5" stroke-width="1"/>
+
+  <!-- ==================== TASK: Human writes OpenAPI spec ==================== -->
+  <rect x="40" y="150" width="490" height="45" rx="22" fill="url(#taskGrad)" filter="url(#shadowSmall)"/>
+  <text x="285" y="178" text-anchor="middle" fill="#0e7490" font-size="12" font-weight="600">👤 Human writes OpenAPI spec</text>
+  
+  <!-- Arrow down -->
+  <line x1="285" y1="195" x2="285" y2="215" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== GATE 1: Change Allowlist ==================== -->
+  <rect x="40" y="225" width="490" height="70" rx="6" fill="white" stroke="#3b82f6" stroke-width="2" filter="url(#shadowSmall)"/>
+  <rect x="570" y="225" width="490" height="70" rx="6" fill="white" stroke="#ef4444" stroke-width="2" filter="url(#shadowSmall)"/>
+  
+  <text x="285" y="252" text-anchor="middle" fill="#1e40af" font-size="13" font-weight="600">Change Allowlist</text>
+  <rect x="60" y="262" width="200" height="24" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+  <text x="160" y="278" text-anchor="middle" fill="#1e40af" font-size="10">packages/** edit blocked</text>
+  <rect x="270" y="262" width="200" height="24" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+  <text x="370" y="278" text-anchor="middle" fill="#1e40af" font-size="10">*.generated.* edit blocked</text>
+
+  <text x="815" y="252" text-anchor="middle" fill="#991b1b" font-size="13" font-weight="600">Protected Paths</text>
+  <rect x="590" y="262" width="220" height="24" rx="4" fill="#fee2e2" stroke="#ef4444" stroke-width="1"/>
+  <text x="700" y="278" text-anchor="middle" fill="#991b1b" font-size="10">server/src/_shared/overlays/**</text>
+  <rect x="820" y="262" width="220" height="24" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+  <text x="930" y="278" text-anchor="middle" fill="#92400e" font-size="10">.github/** (approval req)</text>
+
+  <!-- Gate 1 badge (after boxes for z-index) -->
+  <rect x="515" y="246" width="70" height="28" rx="14" fill="#1e293b"/>
+  <text x="550" y="265" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Gate 1</text>
+
+  <!-- Arrow down -->
+  <line x1="550" y1="295" x2="550" y2="315" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== GATE 2: OpenAPI Spec Validation ==================== -->
+  <rect x="40" y="325" width="490" height="70" rx="6" fill="white" stroke="#3b82f6" stroke-width="2" filter="url(#shadowSmall)"/>
+  <rect x="570" y="325" width="490" height="70" rx="6" fill="#f8fafc" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4"/>
+  
+  <text x="285" y="352" text-anchor="middle" fill="#1e40af" font-size="13" font-weight="600">OpenAPI Spec Validation</text>
+  
+  <rect x="100" y="362" width="200" height="24" rx="4" fill="#dc2626"/>
+  <text x="200" y="378" text-anchor="middle" fill="white" font-size="9" font-weight="600">Spec Lint (Spectral)</text>
+  
+  <rect x="320" y="362" width="180" height="24" rx="4" fill="#f59e0b"/>
+  <text x="410" y="378" text-anchor="middle" fill="white" font-size="9" font-weight="600">Breaking Changes (oasdiff)</text>
+
+  <text x="815" y="365" text-anchor="middle" fill="#9ca3af" font-size="11" font-style="italic">No implementation checks at this gate</text>
+
+  <!-- Gate 2 badge (after boxes for z-index) -->
+  <rect x="515" y="346" width="70" height="28" rx="14" fill="#1e293b"/>
+  <text x="550" y="365" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Gate 2</text>
+
+  <!-- Arrow down -->
+  <line x1="550" y1="395" x2="550" y2="415" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== GENERATOR ==================== -->
+  <rect x="200" y="425" width="700" height="50" rx="25" fill="url(#generatorGrad)" filter="url(#shadow)"/>
+  <text x="550" y="455" text-anchor="middle" fill="white" font-size="14" font-weight="600">micro-contracts generate: spec/** → packages/**</text>
+
+  <!-- Arrow down -->
+  <line x1="550" y1="475" x2="550" y2="495" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== GATE 3: Artifact Integrity ==================== -->
+  <rect x="40" y="505" width="490" height="115" rx="6" fill="white" stroke="#3b82f6" stroke-width="2" filter="url(#shadowSmall)"/>
+  <rect x="570" y="505" width="490" height="115" rx="6" fill="#f8fafc" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4"/>
+  
+  <text x="285" y="532" text-anchor="middle" fill="#1e40af" font-size="13" font-weight="600">Generated Artifact Integrity</text>
+  
+  <rect x="60" y="542" width="140" height="24" rx="4" fill="#dc2626"/>
+  <text x="130" y="558" text-anchor="middle" fill="white" font-size="9" font-weight="600">Drift Check (git diff)</text>
+  
+  <rect x="210" y="542" width="140" height="24" rx="4" fill="#dc2626"/>
+  <text x="280" y="558" text-anchor="middle" fill="white" font-size="9" font-weight="600">Manifest Verification</text>
+  
+  <rect x="360" y="542" width="140" height="24" rx="4" fill="#dc2626"/>
+  <text x="430" y="558" text-anchor="middle" fill="white" font-size="9" font-weight="600">Package Typecheck (tsc)</text>
+  
+  <rect x="60" y="577" width="180" height="24" rx="4" fill="#dc2626"/>
+  <text x="150" y="593" text-anchor="middle" fill="white" font-size="9" font-weight="600">Project Rules (Spectral)</text>
+  
+  <rect x="250" y="577" width="250" height="24" rx="4" fill="#dc2626"/>
+  <text x="375" y="593" text-anchor="middle" fill="white" font-size="9" font-weight="600">Published Breaking Changes (oasdiff)</text>
+
+  <text x="815" y="565" text-anchor="middle" fill="#9ca3af" font-size="11" font-style="italic">No implementation checks at this gate</text>
+
+  <!-- Gate 3 badge (after boxes for z-index) -->
+  <rect x="515" y="549" width="70" height="28" rx="14" fill="#1e293b"/>
+  <text x="550" y="568" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Gate 3</text>
+
+  <!-- Arrow down -->
+  <line x1="550" y1="620" x2="550" y2="640" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== TASK: AI/Human implements code ==================== -->
+  <rect x="570" y="650" width="490" height="45" rx="22" fill="url(#taskGrad)" filter="url(#shadowSmall)"/>
+  <text x="815" y="678" text-anchor="middle" fill="#0e7490" font-size="12" font-weight="600">🤖👤 AI or Human implements code</text>
+  
+  <!-- Arrow down from task -->
+  <line x1="815" y1="695" x2="815" y2="715" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== GATE 4: Code Quality ==================== -->
+  <rect x="40" y="735" width="490" height="70" rx="6" fill="#f8fafc" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4"/>
+  <rect x="570" y="735" width="490" height="70" rx="6" fill="white" stroke="#ef4444" stroke-width="2" filter="url(#shadowSmall)"/>
+  
+  <text x="285" y="775" text-anchor="middle" fill="#9ca3af" font-size="11" font-style="italic">No spec checks at this gate</text>
+
+  <text x="815" y="762" text-anchor="middle" fill="#991b1b" font-size="13" font-weight="600">Code Quality</text>
+  
+  <rect x="590" y="772" width="110" height="24" rx="4" fill="#dc2626"/>
+  <text x="645" y="788" text-anchor="middle" fill="white" font-size="9" font-weight="600">TypeScript Lint (ESLint)</text>
+  
+  <rect x="710" y="772" width="100" height="24" rx="4" fill="#dc2626"/>
+  <text x="760" y="788" text-anchor="middle" fill="white" font-size="9" font-weight="600">Type Check (tsc)</text>
+  
+  <rect x="820" y="772" width="80" height="24" rx="4" fill="#dc2626"/>
+  <text x="860" y="788" text-anchor="middle" fill="white" font-size="9" font-weight="600">Unit Tests</text>
+  
+  <rect x="910" y="772" width="120" height="24" rx="4" fill="#f59e0b"/>
+  <text x="970" y="788" text-anchor="middle" fill="white" font-size="9" font-weight="600">Format Check (Prettier)</text>
+
+  <!-- Gate 4 badge (after boxes for z-index) -->
+  <rect x="515" y="756" width="70" height="28" rx="14" fill="#1e293b"/>
+  <text x="550" y="775" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Gate 4</text>
+
+  <!-- Arrow down -->
+  <line x1="550" y1="805" x2="550" y2="825" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== GATE 5: Doc Consistency & Static Analysis ==================== -->
+  <rect x="40" y="835" width="490" height="70" rx="6" fill="white" stroke="#3b82f6" stroke-width="2" filter="url(#shadowSmall)"/>
+  <rect x="570" y="835" width="490" height="70" rx="6" fill="white" stroke="#ef4444" stroke-width="2" filter="url(#shadowSmall)"/>
+  
+  <text x="285" y="862" text-anchor="middle" fill="#1e40af" font-size="13" font-weight="600">Doc Consistency</text>
+  
+  <rect x="60" y="872" width="200" height="24" rx="4" fill="#dc2626"/>
+  <text x="160" y="888" text-anchor="middle" fill="white" font-size="9" font-weight="600">Markdown Sync (embedoc)</text>
+  
+  <rect x="270" y="872" width="120" height="24" rx="4" fill="#dc2626"/>
+  <text x="330" y="888" text-anchor="middle" fill="white" font-size="9" font-weight="600">Links Validity</text>
+
+  <text x="815" y="862" text-anchor="middle" fill="#991b1b" font-size="13" font-weight="600">Architectural Integrity</text>
+  
+  <rect x="690" y="872" width="250" height="24" rx="4" fill="#dc2626"/>
+  <text x="815" y="888" text-anchor="middle" fill="white" font-size="9" font-weight="600">Static Analysis (CodeQL)</text>
+
+  <!-- Gate 5 badge (after boxes for z-index) -->
+  <rect x="515" y="856" width="70" height="28" rx="14" fill="#1e293b"/>
+  <text x="550" y="875" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Gate 5</text>
+
+  <!-- Arrow down -->
+  <line x1="550" y1="905" x2="550" y2="925" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== TASK: Human reviews docs/code ==================== -->
+  <rect x="40" y="935" width="1020" height="45" rx="22" fill="url(#taskGrad)" filter="url(#shadow)"/>
+  <text x="550" y="963" text-anchor="middle" fill="#0e7490" font-size="12" font-weight="600">👤 Human reviews docs &amp; code</text>
+
+  <!-- Arrow down -->
+  <line x1="550" y1="980" x2="550" y2="1000" stroke="#64748b" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- ==================== MERGE GATE ==================== -->
+  <rect x="40" y="1010" width="1020" height="55" rx="6" fill="url(#mergeGrad)" filter="url(#shadow)"/>
+  <text x="550" y="1035" text-anchor="middle" fill="white" font-size="15" font-weight="600">Merge Gate (All Required Status Checks Must Pass)</text>
+  <text x="550" y="1055" text-anchor="middle" fill="#bbf7d0" font-size="11">Gate 1 + Gate 2 + Gate 3 + Gate 4 + Gate 5 → PR can merge to main</text>
+
+  <!-- ==================== LEGEND ==================== -->
+  <rect x="40" y="1080" width="1020" height="95" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="550" y="1105" text-anchor="middle" fill="#1e293b" font-size="14" font-weight="600">Legend</text>
+  
+  <!-- Severity legend -->
+  <rect x="60" y="1120" width="80" height="22" rx="4" fill="#dc2626"/>
+  <text x="100" y="1135" text-anchor="middle" fill="white" font-size="10" font-weight="600">ERROR</text>
+  <text x="155" y="1135" fill="#475569" font-size="10">Blocks merge</text>
+  
+  <rect x="230" y="1120" width="80" height="22" rx="4" fill="#f59e0b"/>
+  <text x="270" y="1135" text-anchor="middle" fill="white" font-size="10" font-weight="600">WARNING</text>
+  <text x="325" y="1135" fill="#475569" font-size="10">Advisory</text>
+  
+  <rect x="400" y="1120" width="80" height="22" rx="4" fill="#f8fafc" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4"/>
+  <text x="440" y="1135" text-anchor="middle" fill="#9ca3af" font-size="10">Empty</text>
+  <text x="495" y="1135" fill="#475569" font-size="10">No checks</text>
+
+  <rect x="570" y="1120" width="80" height="22" rx="25" fill="url(#generatorGrad)"/>
+  <text x="610" y="1135" text-anchor="middle" fill="white" font-size="10" font-weight="600">Process</text>
+  <text x="665" y="1135" fill="#475569" font-size="10">Transformation</text>
+
+  <rect x="750" y="1120" width="80" height="22" rx="11" fill="url(#taskGrad)"/>
+  <text x="790" y="1135" text-anchor="middle" fill="#0e7490" font-size="10" font-weight="600">Task</text>
+  <text x="845" y="1135" fill="#475569" font-size="10">Human/AI work</text>
+
+  <!-- Lane description -->
+  <rect x="60" y="1150" width="16" height="12" rx="2" fill="#3b82f6"/>
+  <text x="85" y="1160" fill="#475569" font-size="10">Spec Level: OpenAPI contracts, generated artifacts, documentation</text>
+  
+  <rect x="550" y="1150" width="16" height="12" rx="2" fill="#ef4444"/>
+  <text x="575" y="1160" fill="#475569" font-size="10">Impl Level: TypeScript code, tests, static analysis (CodeQL)</text>
+
+</svg>

@@ -1,0 +1,441 @@
+openapi: 3.0.3
+info:
+  title: Sample API
+  description: Sample API for testing api-framework code generation
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3001
+    description: Development server
+
+tags:
+  - name: Entries
+    description: Journal entry operations
+  - name: Accounts
+    description: Account operations
+
+paths:
+  /api/entries:
+    get:
+      tags: [Entries]
+      summary: Get journal entries
+      operationId: getEntries
+      x-micro-contracts-domain: EntryDomain
+      x-micro-contracts-method: getEntries
+      x-scope: external
+      parameters:
+        - name: year
+          in: query
+          description: Filter by fiscal year
+          schema:
+            type: integer
+            example: 2025
+        - name: start_date
+          in: query
+          description: Start date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: End date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: origin
+          in: query
+          description: Filter by origin
+          schema:
+            type: string
+            enum: [manual, generated]
+        - name: limit
+          in: query
+          description: Maximum number of entries to return
+          schema:
+            type: integer
+            default: 10000
+            minimum: 1
+            maximum: 100000
+        - name: offset
+          in: query
+          description: Number of entries to skip
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryListResponse'
+
+    post:
+      tags: [Entries]
+      summary: Save journal entries (batch UPSERT)
+      operationId: saveEntries
+      x-micro-contracts-domain: EntryDomain
+      x-micro-contracts-method: saveEntries
+      x-scope: external
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveEntriesRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  /api/entries/schema:
+    get:
+      tags: [Entries]
+      summary: Get journal entry schema
+      operationId: getJournalSchema
+      x-micro-contracts-domain: EntryDomain
+      x-micro-contracts-method: getSchema
+      x-scope: internal
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JournalSchema'
+
+  /api/accounts:
+    get:
+      tags: [Accounts]
+      summary: Get account list
+      operationId: getAccounts
+      x-micro-contracts-domain: AccountDomain
+      x-micro-contracts-method: getAccounts
+      x-scope: external
+      parameters:
+        - name: statement_type
+          in: query
+          description: Filter by statement type
+          schema:
+            type: string
+            enum: [bs, pl]
+        - name: show_in_cashflow
+          in: query
+          description: Filter by cashflow display flag
+          schema:
+            type: string
+            enum: ['true']
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountListResponse'
+
+    post:
+      tags: [Accounts]
+      summary: Save accounts (batch UPSERT)
+      operationId: saveAccounts
+      x-micro-contracts-domain: AccountDomain
+      x-micro-contracts-method: saveAccounts
+      x-scope: external
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveAccountsRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchResult'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  /api/accounts/{code}:
+    get:
+      tags: [Accounts]
+      summary: Get account by code
+      operationId: getAccountByCode
+      x-micro-contracts-domain: AccountDomain
+      x-micro-contracts-method: getByCode
+      x-scope: internal
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Account code
+          schema:
+            type: string
+            pattern: '^[0-9]{4}$'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '404':
+          description: Not found
+
+components:
+  schemas:
+    # Common
+    BatchResult:
+      type: object
+      required: [success, results]
+      properties:
+        success:
+          type: boolean
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              code:
+                type: string
+              action:
+                type: string
+                enum: [created, updated, deleted]
+
+    ValidationError:
+      type: object
+      required: [code, field, message]
+      properties:
+        code:
+          type: string
+          enum: [REQUIRED, INVALID_FORMAT, NOT_FOUND, BUSINESS_RULE]
+        field:
+          type: string
+        message:
+          type: string
+        row:
+          type: integer
+          description: Error row number (for array inputs)
+
+    ValidationErrorResponse:
+      type: object
+      required: [success, errors]
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+
+    # Entries
+    JournalEntry:
+      type: object
+      required: [id, date, amount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          description: Date (YYYY/MM/DD format)
+        debitAccount:
+          type: string
+          description: Debit account name
+        debitAccountCode:
+          type: string
+          description: Debit account code
+        creditAccount:
+          type: string
+          description: Credit account name
+        creditAccountCode:
+          type: string
+          description: Credit account code
+        amount:
+          type: number
+        memo:
+          type: string
+        origin:
+          type: string
+          enum: [manual, generated]
+
+    JournalEntryInput:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Required for update
+        date:
+          type: string
+          format: date
+        debitAccountCode:
+          type: string
+          pattern: '^[0-9]{4}$'
+        creditAccountCode:
+          type: string
+          pattern: '^[0-9]{4}$'
+        amount:
+          type: integer
+          minimum: 0
+          maximum: 999999999999
+        memo:
+          type: string
+          maxLength: 500
+        _deleted:
+          type: boolean
+          description: Set true for logical deletion
+
+    SaveEntriesRequest:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/JournalEntryInput'
+
+    EntryListResponse:
+      type: object
+      required: [entries, total, hasMore, limit]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/JournalEntry'
+        total:
+          type: integer
+        hasMore:
+          type: boolean
+        limit:
+          type: integer
+        warning:
+          type: string
+
+    JournalSchema:
+      type: object
+      required: [defaultTab, tabs, columnDefinitions, dropdownSources]
+      properties:
+        defaultTab:
+          type: string
+        tabs:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        columnDefinitions:
+          type: object
+          additionalProperties: true
+        dropdownSources:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    # Accounts
+    Account:
+      type: object
+      required: [code, name, statementType, balanceDirection]
+      properties:
+        id:
+          type: string
+          description: Same as code
+        code:
+          type: string
+          description: Account code (primary key)
+        name:
+          type: string
+        statementType:
+          type: integer
+          enum: [1, 2]
+          description: 1=BS, 2=PL
+        parentCode:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+        balanceDirection:
+          type: integer
+          enum: [1, -1]
+          description: 1=Debit, -1=Credit
+
+    AccountInput:
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: '^[0-9]{4}$'
+        name:
+          type: string
+          maxLength: 100
+        statementType:
+          type: integer
+          enum: [1, 2]
+        parentCode:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+        balanceDirection:
+          type: integer
+          enum: [1, -1]
+        _deleted:
+          type: boolean
+
+    SaveAccountsRequest:
+      type: object
+      required: [accounts]
+      properties:
+        accounts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/AccountInput'
+
+    AccountListResponse:
+      type: object
+      required: [accounts]
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Account'
+        statementTypes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+        balanceDirections:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+

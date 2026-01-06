@@ -1,0 +1,10 @@
+{
+  "name": "@project/contract",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./core/*": "./core/*"
+  }
+}
+

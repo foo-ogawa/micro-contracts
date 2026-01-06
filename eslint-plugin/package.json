@@ -1,0 +1,24 @@
+{
+  "name": "eslint-plugin-micro-contracts",
+  "version": "1.0.0",
+  "description": "ESLint rules for micro-contracts projects",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["eslint", "eslintplugin", "micro-contracts"],
+  "peerDependencies": {
+    "eslint": ">=8.0.0",
+    "@typescript-eslint/utils": ">=6.0.0"
+  },
+  "devDependencies": {
+    "@types/eslint": "^8.56.0",
+    "@typescript-eslint/utils": "^8.0.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.0.0"
+  }
+}
+

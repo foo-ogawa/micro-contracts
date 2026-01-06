@@ -1,0 +1,33 @@
+# embedoc configuration for micro-contracts examples
+# Automatically syncs OpenAPI spec and overlay information to README.md
+version: "1.0"
+
+# Target files
+targets:
+  - pattern: "./*.md"
+    comment_style: html
+
+# Datasource definitions
+datasources:
+  # OpenAPI specs (YAML files)
+  core_spec:
+    type: yaml
+    path: "./spec/core/openapi/core.yaml"
+
+  billing_spec:
+    type: yaml
+    path: "./spec/billing/openapi/billing.yaml"
+
+  # Overlay files
+  middleware_overlay:
+    type: yaml
+    path: "./spec/_shared/overlays/middleware.overlay.yaml"
+
+# Embed directory (TypeScript for marker embedding)
+embeds_dir: "./embeds"
+
+# Output settings
+output:
+  encoding: utf-8
+  line_ending: lf
+
