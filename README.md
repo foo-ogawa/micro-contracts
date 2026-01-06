@@ -346,20 +346,6 @@ export class UserDomain implements UserDomainApi {
 
 ---
 
-## Current Status
-
-| Capability | Status |
-|------------|--------|
-| Contract generation (types, schemas, validators) | ✅ Stable |
-| HTTP-agnostic domain layer | ✅ Stable |
-| `contract-published` extraction | ✅ Stable |
-| OpenAPI Overlays | ✅ Stable |
-| `x-micro-contracts-depend-on` + `deps/` | ✅ Stable |
-| Spectral integration | ✅ Stable |
-| Watch mode (`generate --watch`) | 🔵 Planned |
-
----
-
 ## License
 
 MIT
