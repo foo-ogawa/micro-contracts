@@ -49,6 +49,17 @@ export interface ChecksConfig {
 }
 
 /**
+ * Gate numbers for guardrail checks
+ * 
+ * Gate 1: Change Allowlist (allowlist)
+ * Gate 2: OpenAPI Contract Validation (spec-lint, spec-breaking)
+ * Gate 3: Generated Artifact Integrity (drift, manifest)
+ * Gate 4: Code Quality (code-lint, code-typecheck, code-test)
+ * Gate 5: Doc Consistency & Static Analysis (docs-sync, docs-links, security)
+ */
+export type GateNumber = 1 | 2 | 3 | 4 | 5;
+
+/**
  * Configuration for a single check command
  */
 export interface CheckCommandConfig {
@@ -67,6 +78,18 @@ export interface CheckCommandConfig {
    * Whether this check is enabled (default: true)
    */
   enabled?: boolean;
+
+  /**
+   * Gate number this check belongs to (1-5)
+   * Used with --gate option to run checks by gate
+   * 
+   * Gate 1: Change Allowlist
+   * Gate 2: OpenAPI Contract Validation
+   * Gate 3: Generated Artifact Integrity
+   * Gate 4: Code Quality
+   * Gate 5: Doc Consistency & Static Analysis
+   */
+  gate?: GateNumber;
 }
 
 /**
@@ -145,6 +168,8 @@ export interface CheckOptions {
   only?: string[];
   /** Skip specific checks */
   skip?: string[];
+  /** Run checks for specific gates only (1-5) */
+  gates?: GateNumber[];
   /** Enable verbose output */
   verbose?: boolean;
   /** Enable auto-fix where possible */
@@ -184,6 +209,8 @@ export interface CheckSummary {
 export interface CheckDefinition {
   name: string;
   description: string;
+  /** Gate number this check belongs to (1-5) */
+  gate?: GateNumber;
   run: (options: CheckOptions) => Promise<CheckResult>;
 }
 

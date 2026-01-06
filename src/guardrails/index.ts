@@ -21,6 +21,7 @@ export type {
   CheckResult,
   CheckSummary,
   CheckDefinition,
+  GateNumber,
 } from './types.js';
 
 // Config
@@ -97,5 +98,8 @@ export {
   runAllChecks,
   formatCheckResults,
   getAvailableChecks,
+  GATE_DESCRIPTIONS,
 } from './runner.js';
+
+export type { CheckSummaryWithGates } from './runner.js';
 

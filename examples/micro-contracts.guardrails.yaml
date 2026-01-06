@@ -94,6 +94,7 @@ checks:
   # Schema Validity, x-security Required, x-auth Declaration, Description Check
   spec-lint:
     command: "npx @stoplight/spectral-cli lint {files} --ruleset spec/spectral.yaml"
+    gate: 2
   
   # Breaking Changes detection (oasdiff)
   # Compare current spec against main branch
@@ -104,15 +105,17 @@ checks:
   #   Example below uses: main:examples/packages/... (for this repo's structure)
   spec-breaking:
     command: "bash -c 'npx @redocly/cli bundle spec/core/openapi/core.yaml -o /tmp/current.yaml && git show main:examples/packages/contract/core/docs/openapi.generated.yaml > /tmp/base.yaml 2>/dev/null && oasdiff breaking /tmp/base.yaml /tmp/current.yaml --fail-on ERR || echo \"No base spec found (new file)\"'"
+    gate: 2
 
   # ==========================================
   # Gate 3: Generated Artifact Integrity
   # ==========================================
-  # drift, manifest are built-in checks
+  # drift, manifest are built-in checks (gate: 3)
   
   # Generated package type check
   package-typecheck:
     command: "cd packages/contract && npx tsc --noEmit"
+    gate: 3
 
   # ==========================================
   # Gate 4: Code Quality
@@ -120,14 +123,17 @@ checks:
   # TypeScript Lint (ESLint)
   code-lint:
     command: "cd server && npx eslint src/ --ext .ts && cd ../frontend && npx eslint src/ --ext .ts,.tsx"
+    gate: 4
   
   # Type Check (tsc)
   code-typecheck:
     command: "cd server && npx tsc --noEmit && cd ../frontend && npx tsc --noEmit"
+    gate: 4
   
   # Unit Tests
   code-test:
     command: "cd server && npm test && cd ../frontend && npm test"
+    gate: 4
     enabled: false  # Enable when tests are set up
 
   # ==========================================
@@ -136,10 +142,12 @@ checks:
   # Markdown Sync (embedoc) - regenerate and check for drift
   docs-sync:
     command: "npx embedoc build && git diff --exit-code docs/"
+    gate: 5
     enabled: false  # Enable when docs/ directory exists
   
   # Links Valid - verify documentation references
   docs-links:
     command: "node scripts/verify-doc-consistency.mjs"
+    gate: 5
     enabled: false  # Enable when scripts/verify-doc-consistency.mjs exists
   

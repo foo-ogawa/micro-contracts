@@ -47,12 +47,44 @@ Checks are divided into two categories:
 - **Built-in**: Core checks implemented in `micro-contracts` CLI (allowlist, drift, manifest)
 - **Custom**: User-defined commands in `micro-contracts.guardrails.yaml` (`checks:` section)
 
+### Check Command Options
+
 ```bash
-# Quick start
-micro-contracts check --init    # Initialize config
-micro-contracts check           # Run all checks
-micro-contracts check --gate 2  # Run specific gate
-micro-contracts check --list    # List available checks
+micro-contracts check [options]
+
+Options:
+  --only <checks>             Run only specific checks (comma-separated)
+  --skip <checks>             Skip specific checks (comma-separated)
+  --gate <gates>              Run checks for specific gates only (comma-separated, 1-5)
+  -v, --verbose               Enable verbose output (groups by gate)
+  --fix                       Auto-fix issues where possible
+  -g, --guardrails <path>     Path to guardrails.yaml
+  -d, --generated-dir <path>  Path to generated files directory (default: "packages/")
+  --changed-files <path>      Path to file containing list of changed files (for CI)
+  --list                      List available checks with gate assignments
+  --list-gates                List available gates
+```
+
+**Examples:**
+
+```bash
+# Run all checks
+micro-contracts check
+
+# Run only Gate 1 and 2 checks
+micro-contracts check --gate 1,2
+
+# Run Gate 3 checks with verbose output (grouped by gate)
+micro-contracts check --gate 3 -v
+
+# Run specific checks by name
+micro-contracts check --only allowlist,drift
+
+# List all checks with their gate assignments
+micro-contracts check --list
+
+# List available gates
+micro-contracts check --list-gates
 ```
 
 ### Gate 1: Change Allowlist
@@ -264,6 +296,7 @@ checks:
   # Schema Validity, x-security Required, x-auth Declaration, Description Check
   spec-lint:
     command: "npx @stoplight/spectral-cli lint {files} --ruleset spec/spectral.yaml"
+    gate: 2
   
   # Breaking Changes detection (oasdiff)
   # Compare current spec against main branch
@@ -274,15 +307,17 @@ checks:
   #   Example below uses: main:examples/packages/... (for this repo's structure)
   spec-breaking:
     command: "bash -c 'npx @redocly/cli bundle spec/core/openapi/core.yaml -o /tmp/current.yaml && git show main:examples/packages/contract/core/docs/openapi.generated.yaml > /tmp/base.yaml 2>/dev/null && oasdiff breaking /tmp/base.yaml /tmp/current.yaml --fail-on ERR || echo \"No base spec found (new file)\"'"
+    gate: 2
 
   # ==========================================
   # Gate 3: Generated Artifact Integrity
   # ==========================================
-  # drift, manifest are built-in checks
+  # drift, manifest are built-in checks (gate: 3)
   
   # Generated package type check
   package-typecheck:
     command: "cd packages/contract && npx tsc --noEmit"
+    gate: 3
 
   # ==========================================
   # Gate 4: Code Quality
@@ -290,14 +325,17 @@ checks:
   # TypeScript Lint (ESLint)
   code-lint:
     command: "cd server && npx eslint src/ --ext .ts && cd ../frontend && npx eslint src/ --ext .ts,.tsx"
+    gate: 4
   
   # Type Check (tsc)
   code-typecheck:
     command: "cd server && npx tsc --noEmit && cd ../frontend && npx tsc --noEmit"
+    gate: 4
   
   # Unit Tests
   code-test:
     command: "cd server && npm test && cd ../frontend && npm test"
+    gate: 4
     enabled: false  # Enable when tests are set up
 
   # ==========================================
@@ -306,11 +344,13 @@ checks:
   # Markdown Sync (embedoc) - regenerate and check for drift
   docs-sync:
     command: "npx embedoc build && git diff --exit-code docs/"
+    gate: 5
     enabled: false  # Enable when docs/ directory exists
   
   # Links Valid - verify documentation references
   docs-links:
     command: "node scripts/verify-doc-consistency.mjs"
+    gate: 5
     enabled: false  # Enable when scripts/verify-doc-consistency.mjs exists
   
 ```
@@ -457,11 +497,13 @@ jobs:
     "check": "node ../dist/cli.js check",
     "check:all": "node ../dist/cli.js check",
     
-    "check:gate1": "node ../dist/cli.js check --only allowlist",
-    "check:gate2": "node ../dist/cli.js check --only spec-lint,spec-breaking",
-    "check:gate3": "node ../dist/cli.js check --only drift,manifest,package-typecheck",
-    "check:gate4": "node ../dist/cli.js check --only code-lint,code-typecheck",
-    "check:gate5": "node ../dist/cli.js check --only docs-sync,docs-links,security",
+    "check:gate1": "node ../dist/cli.js check --gate 1",
+    "check:gate2": "node ../dist/cli.js check --gate 2",
+    "check:gate3": "node ../dist/cli.js check --gate 3",
+    "check:gate4": "node ../dist/cli.js check --gate 4",
+    "check:gate5": "node ../dist/cli.js check --gate 5",
+    "check:gate1-2": "node ../dist/cli.js check --gate 1,2",
+    "check:gate3-5": "node ../dist/cli.js check --gate 3,4,5",
     
     "check:allowlist": "node ../dist/cli.js check --only allowlist",
     "check:spec-lint": "node ../dist/cli.js check --only spec-lint",
@@ -489,8 +531,6 @@ jobs:
     "frontend:install": "cd frontend && npm install",
     "server:dev": "cd server && PORT=3001 npm run dev",
     "frontend:dev": "cd frontend && VITE_API_BASE_URL=http://localhost:3001 npm run dev -- --port 5173",
-    "install:all": "npm run server:install && npm run frontend:install"
-  },
 ```
 
 📄 Source: [`package.json`](../examples/package.json) (lines 7-46)

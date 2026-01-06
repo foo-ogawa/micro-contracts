@@ -10,11 +10,13 @@
     "check": "node ../dist/cli.js check",
     "check:all": "node ../dist/cli.js check",
     
-    "check:gate1": "node ../dist/cli.js check --only allowlist",
-    "check:gate2": "node ../dist/cli.js check --only spec-lint,spec-breaking",
-    "check:gate3": "node ../dist/cli.js check --only drift,manifest,package-typecheck",
-    "check:gate4": "node ../dist/cli.js check --only code-lint,code-typecheck",
-    "check:gate5": "node ../dist/cli.js check --only docs-sync,docs-links,security",
+    "check:gate1": "node ../dist/cli.js check --gate 1",
+    "check:gate2": "node ../dist/cli.js check --gate 2",
+    "check:gate3": "node ../dist/cli.js check --gate 3",
+    "check:gate4": "node ../dist/cli.js check --gate 4",
+    "check:gate5": "node ../dist/cli.js check --gate 5",
+    "check:gate1-2": "node ../dist/cli.js check --gate 1,2",
+    "check:gate3-5": "node ../dist/cli.js check --gate 3,4,5",
     
     "check:allowlist": "node ../dist/cli.js check --only allowlist",
     "check:spec-lint": "node ../dist/cli.js check --only spec-lint",

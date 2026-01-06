@@ -20,7 +20,9 @@ import {
   createGuardrailsConfig,
   generateManifest,
   writeManifest,
+  GATE_DESCRIPTIONS,
 } from './guardrails/index.js';
+import type { GateNumber } from './guardrails/index.js';
 
 const program = new Command();
 
@@ -338,28 +340,55 @@ program
   .description('Run AI guardrail checks')
   .option('--only <checks>', 'Run only specific checks (comma-separated)')
   .option('--skip <checks>', 'Skip specific checks (comma-separated)')
+  .option('--gate <gates>', 'Run checks for specific gates only (comma-separated, 1-5)')
   .option('-v, --verbose', 'Enable verbose output')
   .option('--fix', 'Auto-fix issues where possible')
   .option('-g, --guardrails <path>', 'Path to guardrails.yaml')
   .option('-d, --generated-dir <path>', 'Path to generated files directory', 'packages/')
   .option('--changed-files <path>', 'Path to file containing list of changed files (for CI)')
   .option('--list', 'List available checks')
+  .option('--list-gates', 'List available gates')
   .action(async (options) => {
     try {
+      // List gates
+      if (options.listGates) {
+        console.log('\nAvailable gates:\n');
+        for (const [gate, description] of Object.entries(GATE_DESCRIPTIONS)) {
+          console.log(`  Gate ${gate}: ${description}`);
+        }
+        console.log('\nUsage: micro-contracts check --gate 1,2,3');
+        console.log('');
+        return;
+      }
+      
       // List checks
       if (options.list) {
         console.log('\nAvailable checks:\n');
-        for (const check of getAvailableChecks()) {
-          console.log(`  ${check.name.padEnd(12)} - ${check.description}`);
+        for (const check of getAvailableChecks({ guardrailsPath: options.guardrails })) {
+          const gateStr = check.gate !== undefined ? `[G${check.gate}]` : '    ';
+          console.log(`  ${gateStr} ${check.name.padEnd(20)} - ${check.description}`);
         }
         console.log('');
         return;
+      }
+      
+      // Parse gate option
+      let gates: GateNumber[] | undefined;
+      if (options.gate) {
+        gates = options.gate.split(',').map((s: string) => {
+          const num = parseInt(s.trim(), 10);
+          if (num < 1 || num > 5 || isNaN(num)) {
+            throw new Error(`Invalid gate number: ${s}. Must be 1-5.`);
+          }
+          return num as GateNumber;
+        });
       }
       
       // Parse options
       const checkOptions = {
         only: options.only?.split(',').map((s: string) => s.trim()),
         skip: options.skip?.split(',').map((s: string) => s.trim()),
+        gates,
         verbose: options.verbose,
         fix: options.fix,
         guardrailsPath: options.guardrails,
@@ -371,7 +400,7 @@ program
       const summary = await runAllChecks(checkOptions);
       
       // Output results
-      console.log(formatCheckResults(summary, options.verbose));
+      console.log(formatCheckResults(summary, options.verbose, summary.checks));
       
       // Exit with error if any checks failed
       if (summary.failed > 0) {
