@@ -39,11 +39,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/user/micro-contracts.git"
+    "url": "git+https://github.com/foo-ogawa/micro-contracts.git"
   },
-  "homepage": "https://github.com/user/micro-contracts#readme",
+  "homepage": "https://github.com/foo-ogawa/micro-contracts#readme",
   "bugs": {
-    "url": "https://github.com/user/micro-contracts/issues"
+    "url": "https://github.com/foo-ogawa/micro-contracts/issues"
   },
   "dependencies": {
     "commander": "^12.1.0",
