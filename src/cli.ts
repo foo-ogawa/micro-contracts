@@ -21,6 +21,7 @@ import {
   generateManifest,
   writeManifest,
   GATE_DESCRIPTIONS,
+  loadGuardrailsConfigWithPath,
 } from './guardrails/index.js';
 import type { GateNumber } from './guardrails/index.js';
 
@@ -29,7 +30,7 @@ const program = new Command();
 program
   .name('micro-contracts')
   .description('Contract-first OpenAPI toolchain for TypeScript')
-  .version('1.0.0');
+  .version('0.9.2');
 
 // Generate command
 program
@@ -42,7 +43,7 @@ program
   .option('--frontend-only', 'Generate frontend clients only')
   .option('--docs-only', 'Generate documentation only')
   .option('--skip-lint', 'Skip linting before generation')
-  .option('--manifest', 'Generate manifest for guardrails')
+  .option('--no-manifest', 'Skip manifest generation even if guardrails are configured')
   .option('--manifest-dir <path>', 'Directory for manifest (default: packages/)')
   .action(async (options) => {
     try {
@@ -77,17 +78,23 @@ program
         modules: options.module,
       });
       
-      // Generate manifest if requested
-      if (options.manifest) {
-        const manifestDir = options.manifestDir || 'packages/';
-        if (fs.existsSync(manifestDir)) {
-          console.log(`\nGenerating manifest for: ${manifestDir}`);
-          const manifest = await generateManifest(manifestDir, {
-            generatorVersion: '1.0.0',
-          });
-          const manifestPath = writeManifest(manifest, manifestDir);
-          const fileCount = Object.keys(manifest.files).length;
-          console.log(`Written: ${manifestPath} (${fileCount} files)`);
+      // Generate manifest if guardrails config has 'generated' section
+      // (unless --no-manifest is specified)
+      if (options.manifest !== false) {
+        const { config: guardrailsConfig } = loadGuardrailsConfigWithPath();
+        
+        // Check if guardrails config has generated patterns defined
+        if (guardrailsConfig?.generated && guardrailsConfig.generated.length > 0) {
+          const manifestDir = options.manifestDir || 'packages/';
+          if (fs.existsSync(manifestDir)) {
+            console.log(`\nGenerating manifest for: ${manifestDir}`);
+            const manifest = await generateManifest(manifestDir, {
+              generatorVersion: '1.0.0',
+            });
+            const manifestPath = writeManifest(manifest, manifestDir);
+            const fileCount = Object.keys(manifest.files).length;
+            console.log(`Written: ${manifestPath} (${fileCount} files)`);
+          }
         }
       }
       

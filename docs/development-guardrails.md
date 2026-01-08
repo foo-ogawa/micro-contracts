@@ -135,6 +135,8 @@ Transforms `spec/**` → `packages/**`.
 |---------|-------------|
 | `micro-contracts generate` | Generate contracts from OpenAPI specs |
 
+> **Note**: When `micro-contracts.guardrails.yaml` has a `generated:` section defined, `generate` automatically creates/updates `packages/.generated-manifest.json`. Use `--no-manifest` to skip this behavior.
+
 ### Gate 3: Generated Artifact Integrity
 
 Ensures generated code matches spec and hasn't been tampered.
@@ -360,7 +362,7 @@ checks:
 
 ### Manifest Format
 
-The `micro-contracts generate` command creates `packages/.generated-manifest.json`:
+When guardrails are configured with a `generated:` section, `micro-contracts generate` automatically creates `packages/.generated-manifest.json`:
 
 ```json
 {
