@@ -30,7 +30,7 @@ const program = new Command();
 program
   .name('micro-contracts')
   .description('Contract-first OpenAPI toolchain for TypeScript')
-  .version('0.9.2');
+  .version('0.9.3');
 
 // Generate command
 program
@@ -87,13 +87,17 @@ program
         if (guardrailsConfig?.generated && guardrailsConfig.generated.length > 0) {
           const manifestDir = options.manifestDir || 'packages/';
           if (fs.existsSync(manifestDir)) {
-            console.log(`\nGenerating manifest for: ${manifestDir}`);
-            const manifest = await generateManifest(manifestDir, {
-              generatorVersion: '1.0.0',
+            const { manifest, changed } = await generateManifest(manifestDir, {
+              generatorVersion: '0.9.3',
             });
-            const manifestPath = writeManifest(manifest, manifestDir);
             const fileCount = Object.keys(manifest.files).length;
-            console.log(`Written: ${manifestPath} (${fileCount} files)`);
+            
+            if (changed) {
+              const manifestPath = writeManifest(manifest, manifestDir);
+              console.log(`\nManifest updated: ${manifestPath} (${fileCount} files)`);
+            } else {
+              console.log(`\nManifest unchanged (${fileCount} files)`);
+            }
           }
         }
       }
@@ -474,13 +478,18 @@ program
       } else {
         // Generate mode
         console.log(`Generating manifest for: ${baseDir}`);
-        const manifest = await generateManifest(baseDir, {
-          generatorVersion: '1.0.0',
+        const { manifest, changed } = await generateManifest(baseDir, {
+          generatorVersion: '0.9.3',
         });
         
-        const manifestPath = writeManifest(manifest, baseDir);
         const fileCount = Object.keys(manifest.files).length;
-        console.log(`Written: ${manifestPath} (${fileCount} files)`);
+        
+        if (changed) {
+          const manifestPath = writeManifest(manifest, baseDir);
+          console.log(`Manifest updated: ${manifestPath} (${fileCount} files)`);
+        } else {
+          console.log(`Manifest unchanged (${fileCount} files)`);
+        }
       }
       
     } catch (error) {

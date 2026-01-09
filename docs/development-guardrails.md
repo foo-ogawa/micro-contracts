@@ -366,9 +366,9 @@ When guardrails are configured with a `generated:` section, `micro-contracts gen
 
 ```json
 {
-  "version": "1.0.0",
-  "generatedAt": "2024-01-15T10:30:00Z",
-  "generatorVersion": "1.2.3",
+  "version": "1.0",
+  "generatorVersion": "0.9.3",
+  "updatedAt": "2024-01-15T10:30:00Z",
   "files": {
     "contract/core/schemas/types.ts": {
       "sha256": "a1b2c3d4e5f6...",
@@ -377,6 +377,8 @@ When guardrails are configured with a `generated:` section, `micro-contracts gen
   }
 }
 ```
+
+> **Note**: `updatedAt` is only updated when the files actually change. If you run `generate` and the output is identical, the timestamp remains unchanged.
 
 ---
 

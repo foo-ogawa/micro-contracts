@@ -66,6 +66,8 @@ export {
   formatManifestResult,
 } from './manifest.js';
 
+export type { GenerateManifestResult } from './manifest.js';
+
 // Lint
 export {
   findOpenAPISpecs,

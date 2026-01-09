@@ -123,8 +123,8 @@ export interface DriftResult {
 export interface GeneratedManifest {
   /** Manifest format version */
   version: string;
-  /** Timestamp when manifest was generated */
-  generatedAt: string;
+  /** Timestamp when manifest was last updated (only changes when files change) */
+  updatedAt?: string;
   /** Version of micro-contracts that generated this */
   generatorVersion: string;
   /** Map of relative file paths to their metadata */

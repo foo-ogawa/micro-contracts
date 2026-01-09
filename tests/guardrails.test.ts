@@ -189,10 +189,11 @@ describe('manifest', () => {
     fs.writeFileSync(path.join(tempDir, 'sub', 'file3.ts'), 'const c = 3;');
     
     // Generate manifest
-    const manifest = await generateManifest(tempDir, {
+    const { manifest, changed } = await generateManifest(tempDir, {
       generatorVersion: '1.0.0',
     });
     
+    expect(changed).toBe(true); // First generation should be marked as changed
     expect(manifest.version).toBe('1.0');
     expect(manifest.generatorVersion).toBe('1.0.0');
     expect(Object.keys(manifest.files)).toHaveLength(3);
@@ -213,6 +214,12 @@ describe('manifest', () => {
     const result = await verifyManifest(tempDir);
     expect(result.valid).toBe(true);
     expect(result.mismatches).toHaveLength(0);
+    
+    // Generate again without changes - should not be marked as changed
+    const { changed: changedAgain } = await generateManifest(tempDir, {
+      generatorVersion: '1.0.0',
+    });
+    expect(changedAgain).toBe(false);
   });
   
   it('should detect modified files', async () => {
@@ -220,7 +227,7 @@ describe('manifest', () => {
     const filePath = path.join(tempDir, 'file.ts');
     fs.writeFileSync(filePath, 'original content');
     
-    const manifest = await generateManifest(tempDir, {
+    const { manifest } = await generateManifest(tempDir, {
       generatorVersion: '1.0.0',
     });
     writeManifest(manifest, tempDir);
@@ -240,7 +247,7 @@ describe('manifest', () => {
     const filePath = path.join(tempDir, 'file.ts');
     fs.writeFileSync(filePath, 'content');
     
-    const manifest = await generateManifest(tempDir, {
+    const { manifest } = await generateManifest(tempDir, {
       generatorVersion: '1.0.0',
     });
     writeManifest(manifest, tempDir);
@@ -259,7 +266,7 @@ describe('manifest', () => {
     // Create files and manifest
     fs.writeFileSync(path.join(tempDir, 'file.ts'), 'content');
     
-    const manifest = await generateManifest(tempDir, {
+    const { manifest } = await generateManifest(tempDir, {
       generatorVersion: '1.0.0',
     });
     writeManifest(manifest, tempDir);

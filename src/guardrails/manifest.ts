@@ -58,7 +58,36 @@ export async function getGeneratedFiles(
 }
 
 /**
+ * Result of manifest generation with change detection
+ */
+export interface GenerateManifestResult {
+  manifest: GeneratedManifest;
+  changed: boolean;
+}
+
+/**
+ * Compare two manifest file records for equality
+ */
+function areFilesEqual(
+  oldFiles: Record<string, GeneratedFileInfo>,
+  newFiles: Record<string, GeneratedFileInfo>
+): boolean {
+  const oldKeys = Object.keys(oldFiles).sort();
+  const newKeys = Object.keys(newFiles).sort();
+  
+  if (oldKeys.length !== newKeys.length) return false;
+  if (oldKeys.join(',') !== newKeys.join(',')) return false;
+  
+  for (const key of oldKeys) {
+    if (oldFiles[key].sha256 !== newFiles[key].sha256) return false;
+  }
+  
+  return true;
+}
+
+/**
  * Generate manifest for a directory of generated files
+ * Only updates `updatedAt` timestamp when files actually change
  */
 export async function generateManifest(
   baseDir: string,
@@ -67,7 +96,7 @@ export async function generateManifest(
     sourceMap?: Map<string, string>;  // file -> source mapping
     patterns?: string[];
   } = {}
-): Promise<GeneratedManifest> {
+): Promise<GenerateManifestResult> {
   const {
     generatorVersion = '1.0.0',
     sourceMap = new Map(),
@@ -96,11 +125,31 @@ export async function generateManifest(
     fileInfos[relPath] = info;
   }
   
-  return {
+  // Load existing manifest to compare
+  const existingManifest = loadManifest(baseDir);
+  
+  // Check if files have changed
+  const filesChanged = !existingManifest || !areFilesEqual(existingManifest.files, fileInfos);
+  
+  // Only update timestamp if files changed
+  const updatedAt = filesChanged 
+    ? new Date().toISOString() 
+    : existingManifest?.updatedAt;
+  
+  const manifest: GeneratedManifest = {
     version: MANIFEST_VERSION,
-    generatedAt: new Date().toISOString(),
     generatorVersion,
     files: fileInfos,
+  };
+  
+  // Only include updatedAt if we have a timestamp
+  if (updatedAt) {
+    manifest.updatedAt = updatedAt;
+  }
+  
+  return {
+    manifest,
+    changed: filesChanged,
   };
 }
 
