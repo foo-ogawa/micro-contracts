@@ -131,8 +131,14 @@ export async function generateManifest(
   // Check if files have changed
   const filesChanged = !existingManifest || !areFilesEqual(existingManifest.files, fileInfos);
   
-  // Only update timestamp if files changed
-  const updatedAt = filesChanged 
+  // Check if generator version has changed
+  const versionChanged = !existingManifest || existingManifest.generatorVersion !== generatorVersion;
+  
+  // Content is considered changed if files or version changed
+  const changed = filesChanged || versionChanged;
+  
+  // Only update timestamp if something changed
+  const updatedAt = changed 
     ? new Date().toISOString() 
     : existingManifest?.updatedAt;
   
@@ -149,7 +155,7 @@ export async function generateManifest(
   
   return {
     manifest,
-    changed: filesChanged,
+    changed,
   };
 }
 
