@@ -9,6 +9,7 @@
 import { Command } from 'commander';
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 import yaml from 'yaml';
 import { generate, loadConfig, loadOpenAPISpec, lintSpec, formatLintResults } from './generator/index.js';
 import type { GeneratorConfig, MultiModuleConfig } from './types.js';
@@ -25,12 +26,16 @@ import {
 } from './guardrails/index.js';
 import type { GateNumber } from './guardrails/index.js';
 
+// Load package.json for version info
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json') as { version: string };
+
 const program = new Command();
 
 program
   .name('micro-contracts')
   .description('Contract-first OpenAPI toolchain for TypeScript')
-  .version('0.9.3');
+  .version(pkg.version);
 
 // Generate command
 program
@@ -88,7 +93,7 @@ program
           const manifestDir = options.manifestDir || 'packages/';
           if (fs.existsSync(manifestDir)) {
             const { manifest, changed } = await generateManifest(manifestDir, {
-              generatorVersion: '0.9.3',
+              generatorVersion: pkg.version,
             });
             const fileCount = Object.keys(manifest.files).length;
             
@@ -479,7 +484,7 @@ program
         // Generate mode
         console.log(`Generating manifest for: ${baseDir}`);
         const { manifest, changed } = await generateManifest(baseDir, {
-          generatorVersion: '0.9.3',
+          generatorVersion: pkg.version,
         });
         
         const fileCount = Object.keys(manifest.files).length;
