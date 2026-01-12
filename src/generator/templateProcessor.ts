@@ -21,8 +21,8 @@ export interface TemplateConfig {
   server?: string;
   /** Path to frontend client template */
   frontend?: string;
-  /** Path to domain interface template */
-  domains?: string;
+  /** Path to service interface template */
+  services?: string;
   /** Custom templates by name */
   custom?: Record<string, string>;
 }
@@ -42,16 +42,16 @@ export interface TemplateContext {
   extensionInfo: ExtensionInfo[];
   /** Applied overlays */
   appliedOverlays: string[];
-  /** Path to domains object (e.g., 'fastify.domains.core') */
-  domainsPath: string;
+  /** Path to services object (e.g., 'fastify.services.core') */
+  servicesPath: string;
   /** Contract package import path */
   contractPackage: string;
   /** Routes extracted from spec */
   routes: RouteContext[];
-  /** Domains grouped from routes (with methods list) */
-  domains: DomainContext[];
-  /** Domain API types for import (e.g., ['UserDomainApi', 'OrderDomainApi']) */
-  domainTypes: string[];
+  /** Services grouped from routes (with methods list) */
+  services: ServiceContext[];
+  /** Service API types for import (e.g., ['UserServiceApi', 'OrderServiceApi']) */
+  serviceTypes: string[];
   /** Schema types needed for import */
   schemaTypes: string[];
   /** All schema names */
@@ -74,9 +74,9 @@ export interface RouteContext {
   /** HTTP method in uppercase */
   httpMethod: string;
   operationId: string;
-  domain: string;
-  domainKey: string;
-  domainMethod: string;
+  service: string;
+  serviceKey: string;
+  serviceMethod: string;
   summary?: string;
   tags: string[];
   isPublished: boolean;
@@ -101,7 +101,7 @@ export interface RouteContext {
   requestType?: string;
   /** Params type (path + query combined, if exists) */
   paramsType?: string;
-  /** Unified input type (e.g., UserDomain_getUsersInput) */
+  /** Unified input type (e.g., User_getUsersInput) */
   inputType: string;
   /** URL pattern for client using input object (with ${input.xxx} template syntax) */
   clientUrlPatternInput: string;
@@ -134,7 +134,7 @@ export interface ResponseContext {
   schemaName?: string;
 }
 
-export interface DomainContext {
+export interface ServiceContext {
   name: string;
   key: string;
   methods: string[];
@@ -222,14 +222,14 @@ export function loadTemplateWithResolution(options: TemplateResolveOptions): Han
  * Get default template content (built-in - for backward compatibility only)
  * @deprecated Use loadTemplateWithResolution instead
  */
-export function getDefaultTemplate(type: 'server' | 'frontend' | 'domains'): string {
+export function getDefaultTemplate(type: 'server' | 'frontend' | 'services'): string {
   switch (type) {
     case 'server':
       return DEFAULT_SERVER_TEMPLATE;
     case 'frontend':
       return DEFAULT_FRONTEND_TEMPLATE;
-    case 'domains':
-      return DEFAULT_DOMAINS_TEMPLATE;
+    case 'services':
+      return DEFAULT_SERVICES_TEMPLATE;
   }
 }
 
@@ -240,13 +240,13 @@ export function buildTemplateContext(
   spec: OpenAPISpec,
   moduleName: string,
   options: {
-    domainsPath?: string;
+    servicesPath?: string;
     contractPackage?: string;
     extensionInfo?: Map<string, ExtensionInfo>;
     appliedOverlays?: string[];
   } = {}
 ): TemplateContext {
-  const domainsPath = options.domainsPath || `fastify.domains.${moduleName}`;
+  const servicesPath = options.servicesPath || `fastify.services.${moduleName}`;
   const contractPackage = options.contractPackage || `@project/contract/${moduleName}`;
   const extensionInfo = options.extensionInfo 
     ? Array.from(options.extensionInfo.values())
@@ -254,15 +254,14 @@ export function buildTemplateContext(
   const appliedOverlays = options.appliedOverlays || [];
   
   const routes = extractRoutes(spec, extensionInfo);
-  const domains = extractDomains(routes);
+  const services = extractServices(routes);
   const schemaNames = Object.keys(spec.components?.schemas || {});
   
   // Extract base URL from OpenAPI servers
   const baseUrl = extractBaseUrl(spec);
   
-  // Extract domain types for imports (e.g., 'UserDomainApi')
-  // Note: domain.name already includes 'Domain' suffix (e.g., 'UserDomain')
-  const domainTypes = domains.map(d => `${d.name}Api`);
+  // Extract service types for imports (e.g., 'UserServiceApi')
+  const serviceTypes = services.map(s => `${s.name}ServiceApi`);
   
   // Extract schema types needed for imports
   const schemaTypes = extractSchemaTypes(routes);
@@ -278,11 +277,11 @@ export function buildTemplateContext(
     baseUrl,
     extensionInfo,
     appliedOverlays,
-    domainsPath,
+    servicesPath,
     contractPackage,
     routes,
-    domains,
-    domainTypes,
+    services,
+    serviceTypes,
     schemaTypes,
     schemaNames,
     uniqueOverlays,
@@ -350,7 +349,7 @@ function extractSchemaTypes(routes: RouteContext[]): string[] {
     if (route.pathParams.length > 0 || route.queryParams.length > 0) {
       types.add(`${route.typeNameBase}Params`);
     }
-    // Add unified input type (for domain-aligned templates)
+    // Add unified input type (for service-aligned templates)
     types.add(`${route.typeNameBase}Input`);
   }
   
@@ -372,7 +371,7 @@ export function processTemplate(
  */
 export function generateWithTemplate(
   templatePath: string | null,
-  defaultType: 'server' | 'frontend' | 'domains',
+  defaultType: 'server' | 'frontend' | 'services',
   context: TemplateContext
 ): string {
   let template: Handlebars.TemplateDelegate;
@@ -403,16 +402,15 @@ function extractRoutes(
       if (!operation) continue;
 
       // Canonical extension names only
-      const domain = operation['x-micro-contracts-domain'];
-      const domainMethod = operation['x-micro-contracts-method'];
+      const service = operation['x-micro-contracts-service'];
+      const serviceMethod = operation['x-micro-contracts-method'];
       
-      if (!domain || !domainMethod) continue;
+      if (!service || !serviceMethod) continue;
 
       const operationId = operation.operationId || `${method}${apiPath.replace(/[^a-zA-Z0-9]/g, '')}`;
-      const typeNameBase = `${domain}_${domainMethod}`;
+      const typeNameBase = `${service}_${serviceMethod}`;
       const fastifyPath = apiPath.replace(/\{([^}]+)\}/g, ':$1');
-      const domainKey = domain.replace(/Domain$/, '').charAt(0).toLowerCase() + 
-                       domain.replace(/Domain$/, '').slice(1);
+      const serviceKey = service.charAt(0).toLowerCase() + service.slice(1);
 
       // Extract extensions and their parameters
       const extensions: RouteExtension[] = [];
@@ -503,7 +501,7 @@ function extractRoutes(
       const requestType = requestBody?.schemaName;
       // Params type combines both path and query parameters
       const paramsType = (pathParams.length > 0 || queryParams.length > 0) ? `${typeNameBase}Params` : undefined;
-      // Unified input type name (matches contract domain API)
+      // Unified input type name (matches contract service API)
       const inputType = `${typeNameBase}Input`;
       
       routes.push({
@@ -514,9 +512,9 @@ function extractRoutes(
         method,
         httpMethod: method.toUpperCase(),
         operationId,
-        domain,
-        domainKey,
-        domainMethod,
+        service,
+        serviceKey,
+        serviceMethod,
         summary: operation.summary,
         tags: operation.tags || [],
         isPublished: operation['x-micro-contracts-published'] === true,
@@ -538,24 +536,24 @@ function extractRoutes(
   return routes;
 }
 
-function extractDomains(routes: RouteContext[]): DomainContext[] {
-  const domainMap = new Map<string, DomainContext>();
+function extractServices(routes: RouteContext[]): ServiceContext[] {
+  const serviceMap = new Map<string, ServiceContext>();
 
   for (const route of routes) {
-    if (!domainMap.has(route.domain)) {
-      domainMap.set(route.domain, {
-        name: route.domain,
-        key: route.domainKey,
+    if (!serviceMap.has(route.service)) {
+      serviceMap.set(route.service, {
+        name: route.service,
+        key: route.serviceKey,
         methods: [],
       });
     }
-    const domain = domainMap.get(route.domain)!;
-    if (!domain.methods.includes(route.domainMethod)) {
-      domain.methods.push(route.domainMethod);
+    const service = serviceMap.get(route.service)!;
+    if (!service.methods.includes(route.serviceMethod)) {
+      service.methods.push(route.serviceMethod);
     }
   }
 
-  return Array.from(domainMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  return Array.from(serviceMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function markerToRegistryName(marker: string): string {
@@ -667,8 +665,8 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     fastify.addSchema(schema);
   }
 
-  // Domain references from {{domainsPath}}
-  const { {{#each domains}}{{key}}{{#unless @last}}, {{/unless}}{{/each}} } = {{domainsPath}};
+  // Service references from {{servicesPath}}
+  const { {{#each services}}{{key}}{{#unless @last}}, {{/unless}}{{/each}} } = {{servicesPath}};
 {{#if extensionInfo.length}}
 
   // Extension registries
@@ -720,7 +718,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     ],
 {{/if}}
   }, async (req, reply) => {
-    return {{domainKey}}.{{domainMethod}}({{#if pathParams.length}}req.params as types.{{typeNameBase}}Params{{/if}}{{#if queryParams.length}}{{#if pathParams.length}}, {{/if}}req.query as types.{{typeNameBase}}Query{{/if}}{{#if requestBody}}{{#if (or pathParams.length queryParams.length)}}, {{/if}}req.body as types.{{requestBody.schemaName}}{{/if}});
+    return {{serviceKey}}.{{serviceMethod}}({{#if pathParams.length}}req.params as types.{{typeNameBase}}Params{{/if}}{{#if queryParams.length}}{{#if pathParams.length}}, {{/if}}req.query as types.{{typeNameBase}}Query{{/if}}{{#if requestBody}}{{#if (or pathParams.length queryParams.length)}}, {{/if}}req.body as types.{{requestBody.schemaName}}{{/if}});
   });
 
 {{/each}}
@@ -804,19 +802,19 @@ export async function {{operationId}}(
 {{/each}}
 `;
 
-const DEFAULT_DOMAINS_TEMPLATE = `/**
- * Domain interfaces
+const DEFAULT_SERVICES_TEMPLATE = `/**
+ * Service interfaces
  * Auto-generated from OpenAPI specification
  * DO NOT EDIT MANUALLY
  */
 
 import type * as types from '../schemas/types.js';
 
-{{#each domains}}
+{{#each services}}
 /**
  * {{name}} interface
  */
-export interface {{name}}Api {
+export interface {{name}}ServiceApi {
 {{#each methods}}
   {{this}}(...args: unknown[]): Promise<unknown>;
 {{/each}}
@@ -825,5 +823,5 @@ export interface {{name}}Api {
 {{/each}}
 `;
 
-export { DEFAULT_SERVER_TEMPLATE, DEFAULT_FRONTEND_TEMPLATE, DEFAULT_DOMAINS_TEMPLATE };
+export { DEFAULT_SERVER_TEMPLATE, DEFAULT_FRONTEND_TEMPLATE, DEFAULT_SERVICES_TEMPLATE };
 

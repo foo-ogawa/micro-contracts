@@ -45,7 +45,7 @@ export interface OperationObject {
   requestBody?: RequestBodyObject | ReferenceObject;
   responses: Record<string, ResponseObject | ReferenceObject>;
   // Custom extensions (canonical names)
-  'x-micro-contracts-domain'?: string;
+  'x-micro-contracts-service'?: string;
   'x-micro-contracts-method'?: string;
   'x-micro-contracts-published'?: boolean;  // Include in contract-published (default: false)
   'x-micro-contracts-depend-on'?: string[];  // Operation-level dependencies
@@ -204,8 +204,8 @@ export interface TemplateConfig {
   server?: string;
   /** Path to frontend client template */
   frontend?: string;
-  /** Path to domain interface template */
-  domains?: string;
+  /** Path to service interface template */
+  services?: string;
 }
 
 /**
@@ -227,11 +227,11 @@ export interface OutputConfig {
 }
 
 /**
- * Dependency reference format: {module}.{domain}.{method}
+ * Dependency reference format: {module}.{service}.{method}
  */
 export interface DependencyRef {
   module: string;
-  domain: string;
+  service: string;
   method: string;
   raw: string;  // Original string
 }
@@ -244,7 +244,7 @@ export function parseDependencyRef(ref: string): DependencyRef | null {
   if (parts.length !== 3) return null;
   return {
     module: parts[0],
-    domain: parts[1],
+    service: parts[1],
     method: parts[2],
     raw: ref,
   };
@@ -318,8 +318,8 @@ export interface ServerConfig {
   output?: string;
   /** Routes file name */
   routes?: string;
-  /** Path to domains object in Fastify (supports {module} placeholder) */
-  domainsPath?: string;
+  /** Path to services object in Fastify (supports {module} placeholder) */
+  servicesPath?: string;
 }
 
 /**
@@ -330,8 +330,8 @@ export interface FrontendConfig {
   output?: string;
   /** Client file name */
   client?: string;
-  /** Domain re-exports file name */
-  domain?: string;
+  /** Service re-exports file name */
+  service?: string;
   /** Shared client config (for contract-published) */
   shared?: {
     /** Output directory */
@@ -387,14 +387,14 @@ export interface ResolvedModuleConfig {
   server: {
     output: string;
     routes: string;
-    domainsPath: string;
+    servicesPath: string;
     template?: string;
   } | null;
   /** Frontend config (null if disabled) - legacy */
   frontend: {
     output: string;
     client: string;
-    domain: string;
+    service: string;
     template?: string;
     shared: {
       output: string;
@@ -427,7 +427,7 @@ export interface ResolvedModuleConfig {
  * @deprecated Use MultiModuleConfig instead
  */
 export interface GeneratorConfig {
-  /** Module name for domain access */
+  /** Module name for service access */
   moduleName?: string;
 
   /** Contract package output config */
@@ -592,10 +592,10 @@ export function resolveModuleConfig(
       `server/src/${moduleName}`
     ),
     routes: moduleConfig.server?.routes ?? defaults.server?.routes ?? 'routes.generated.ts',
-    domainsPath: expand(
-      moduleConfig.server?.domainsPath ?? 
-      defaults.server?.domainsPath ?? 
-      `fastify.domains.${moduleName}`
+    servicesPath: expand(
+      moduleConfig.server?.servicesPath ?? 
+      defaults.server?.servicesPath ?? 
+      `fastify.services.${moduleName}`
     ),
   } : null;
   
@@ -622,7 +622,7 @@ export function resolveModuleConfig(
       `frontend/src/${moduleName}`
     ),
     client: frontendOverride?.client ?? frontendDefaults?.client ?? 'api.generated.ts',
-    domain: frontendOverride?.domain ?? frontendDefaults?.domain ?? 'domain.generated.ts',
+    service: frontendOverride?.service ?? frontendDefaults?.service ?? 'service.generated.ts',
     shared: frontendShared,
   } : null;
   
@@ -645,6 +645,11 @@ export function resolveModuleConfig(
     ...server,
     template: moduleConfig.templates?.server ?? defaults.templates?.server,
   } : null;
+  
+  // Also check for services template
+  if (serverWithTemplate && !serverWithTemplate.template) {
+    serverWithTemplate.template = moduleConfig.templates?.services ?? defaults.templates?.services;
+  }
   
   const frontendWithTemplate = frontend ? {
     ...frontend,
@@ -675,8 +680,8 @@ export interface RouteInfo {
   path: string;
   method: 'get' | 'post' | 'put' | 'patch' | 'delete';
   operationId: string;
-  domain: string;
-  domainMethod: string;
+  service: string;
+  serviceMethod: string;
   isPublished: boolean;
   summary?: string;
   tags?: string[];
@@ -702,13 +707,13 @@ export interface ResponseInfo {
   schemaName?: string;
 }
 
-// Domain info for interface generation
-export interface DomainInfo {
+// Service info for interface generation
+export interface ServiceInfo {
   name: string;
-  methods: DomainMethodInfo[];
+  methods: ServiceMethodInfo[];
 }
 
-export interface DomainMethodInfo {
+export interface ServiceMethodInfo {
   name: string;
   operationId: string;
   httpMethod: string;

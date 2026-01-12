@@ -16,7 +16,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     fastify.addSchema(schema);
   }
 
-  const { {{#each domains}}{{key}}{{#unless @last}}, {{/unless}}{{/each}} } = {{domainsPath}};
+  const { {{#each services}}{{key}}{{#unless @last}}, {{/unless}}{{/each}} } = {{servicesPath}};
 {{#if extensionInfo.length}}
   const handlers = fastify.overlayHandlers;
 {{/if}}
@@ -52,7 +52,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       data: req.body as types.{{requestBody.schemaName}},
 {{/if}}
     };
-    return {{domainKey}}.{{domainMethod}}(input);
+    return {{serviceKey}}.{{serviceMethod}}(input);
   });
 
 {{/each}}

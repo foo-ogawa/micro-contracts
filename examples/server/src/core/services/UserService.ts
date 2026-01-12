@@ -1,9 +1,9 @@
 /**
- * UserDomain implementation
+ * UserService implementation
  * Business logic separated from framework concerns
  */
 
-import type { UserDomainApi } from '@project/contract/core/domains/UserDomainApi.js';
+import type { UserServiceApi } from '@project/contract/core/services/UserServiceApi.js';
 import type * as types from '@project/contract/core/schemas/types.js';
 
 // Mock data store (in real app: database)
@@ -13,8 +13,8 @@ const mockUsers: types.User[] = [
   { id: '3', name: 'Charlie', email: 'charlie@example.com', role: 'user', createdAt: '2024-01-03T00:00:00Z' },
 ];
 
-export class UserDomain implements UserDomainApi {
-  async getUsers(input: types.UserDomain_getUsersInput): Promise<types.UserListResponse> {
+export class UserService implements UserServiceApi {
+  async getUsers(input: types.User_getUsersInput): Promise<types.UserListResponse> {
     // Input is flattened - direct access to limit/offset
     const limit = input.limit ?? 20;
     const offset = input.offset ?? 0;
@@ -26,7 +26,7 @@ export class UserDomain implements UserDomainApi {
     };
   }
 
-  async createUser(input: types.UserDomain_createUserInput): Promise<types.User> {
+  async createUser(input: types.User_createUserInput): Promise<types.User> {
     // Request body is in 'data' property
     const { data } = input;
     const newUser: types.User = {
@@ -40,7 +40,7 @@ export class UserDomain implements UserDomainApi {
     return newUser;
   }
 
-  async getUserById(input: types.UserDomain_getUserByIdInput): Promise<types.User> {
+  async getUserById(input: types.User_getUserByIdInput): Promise<types.User> {
     // Input is flattened - direct access to id
     const user = mockUsers.find(u => u.id === input.id);
     if (!user) {
@@ -49,7 +49,7 @@ export class UserDomain implements UserDomainApi {
     return user;
   }
 
-  async updateUser(input: types.UserDomain_updateUserInput): Promise<types.User> {
+  async updateUser(input: types.User_updateUserInput): Promise<types.User> {
     // Input is flattened - id is direct, body is in 'data'
     const { id, data } = input;
     const index = mockUsers.findIndex(u => u.id === id);
@@ -61,7 +61,7 @@ export class UserDomain implements UserDomainApi {
     return updated;
   }
 
-  async deleteUser(input: types.UserDomain_deleteUserInput): Promise<void> {
+  async deleteUser(input: types.User_deleteUserInput): Promise<void> {
     // Input is flattened - direct access to id
     const index = mockUsers.findIndex(u => u.id === input.id);
     if (index === -1) {

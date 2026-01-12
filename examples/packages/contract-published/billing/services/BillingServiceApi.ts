@@ -1,5 +1,5 @@
 /**
- * Billing Domain API Interface
+ * Billing Service API Interface
  * Auto-generated from OpenAPI specification
  * DO NOT EDIT MANUALLY
  */
@@ -14,7 +14,7 @@ import type {
   PaymentResult,
 } from '../schemas/types.js';
 
-export interface BillingApi {
+export interface BillingServiceApi {
   /**
    * GET /api/billing/invoices
    */

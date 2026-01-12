@@ -1,18 +1,18 @@
 /**
- * HealthDomain Domain API Interface
+ * Health Service API Interface
  * Auto-generated from OpenAPI specification
  * DO NOT EDIT MANUALLY
  */
 
 import type {
-  HealthDomain_checkInput,
   HealthStatus,
+  Health_checkInput,
 } from '../schemas/types.js';
 
-export interface HealthDomainApi {
+export interface HealthServiceApi {
   /**
    * GET /api/health
    */
-  check(input: HealthDomain_checkInput): Promise<HealthStatus>;
+  check(input: Health_checkInput): Promise<HealthStatus>;
 
 }

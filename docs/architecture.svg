@@ -113,7 +113,7 @@
   <rect x="65" y="420" width="240" height="85" rx="4" fill="#faf5ff" stroke="#c4b5fd"/>
   <text x="185" y="438" text-anchor="middle" class="item" style="font-weight:600;">🖥️ server/src/core/</text>
   <text x="75" y="458" class="item-small">▸ routes.generated.ts</text>
-  <text x="75" y="472" class="item-small">▸ domains/ (hand-code)</text>
+  <text x="75" y="472" class="item-small">▸ services/ (hand-code)</text>
   <text x="75" y="486" class="item-small">▸ models/</text>
   
   <!-- Core - Frontend -->
@@ -142,7 +142,7 @@
   <rect x="355" y="420" width="240" height="85" rx="4" fill="#fff7ed" stroke="#fdba74"/>
   <text x="475" y="438" text-anchor="middle" class="item" style="font-weight:600;">🖥️ server/src/users/</text>
   <text x="365" y="458" class="item-small">▸ routes.generated.ts</text>
-  <text x="365" y="472" class="item-small">▸ domains/ (hand-code)</text>
+  <text x="365" y="472" class="item-small">▸ services/ (hand-code)</text>
   <text x="365" y="486" class="item-small">▸ models/</text>
   
   <!-- Users - Frontend -->
@@ -171,7 +171,7 @@
   <rect x="645" y="420" width="240" height="85" rx="4" fill="#ecfeff" stroke="#67e8f9"/>
   <text x="765" y="438" text-anchor="middle" class="item" style="font-weight:600;">🖥️ notification-service/</text>
   <text x="655" y="458" class="item-small">▸ routes.generated.ts</text>
-  <text x="655" y="472" class="item-small">▸ domains/ (hand-code)</text>
+  <text x="655" y="472" class="item-small">▸ services/ (hand-code)</text>
   <text x="655" y="486" class="item-small">▸ models/</text>
   
   <!-- Notifications - No Frontend -->

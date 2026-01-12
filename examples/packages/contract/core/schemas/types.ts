@@ -97,43 +97,43 @@ export interface HealthStatus {
 }
 
 // Operation-specific types
-export interface UserDomain_getUsersParams {
+export interface User_getUsersParams {
   'limit'?: number;
   'offset'?: number;
 }
 
-export type UserDomain_getUsersInput = UserDomain_getUsersParams;
+export type User_getUsersInput = User_getUsersParams;
 
-export type UserDomain_createUserInput = { data: CreateUserRequest };
+export type User_createUserInput = { data: CreateUserRequest };
 
-export interface UserDomain_getUserByIdParams {
+export interface User_getUserByIdParams {
   'id': string;
 }
 
-export type UserDomain_getUserByIdInput = UserDomain_getUserByIdParams;
+export type User_getUserByIdInput = User_getUserByIdParams;
 
-export interface UserDomain_updateUserParams {
+export interface User_updateUserParams {
   'id': string;
 }
 
-export type UserDomain_updateUserInput = UserDomain_updateUserParams & { data: UpdateUserRequest };
+export type User_updateUserInput = User_updateUserParams & { data: UpdateUserRequest };
 
-export interface UserDomain_deleteUserParams {
+export interface User_deleteUserParams {
   'id': string;
 }
 
-export type UserDomain_deleteUserInput = UserDomain_deleteUserParams;
+export type User_deleteUserInput = User_deleteUserParams;
 
-export type TenantDomain_getDataInput = Record<string, never>;
+export type Tenant_getDataInput = Record<string, never>;
 
-export type TenantDomain_createDataInput = { data: CreateTenantDataRequest };
+export type Tenant_createDataInput = { data: CreateTenantDataRequest };
 
-export type AdminDomain_getStatsInput = Record<string, never>;
+export type Admin_getStatsInput = Record<string, never>;
 
-export interface AdminDomain_suspendUserParams {
+export interface Admin_suspendUserParams {
   'id': string;
 }
 
-export type AdminDomain_suspendUserInput = AdminDomain_suspendUserParams & { data: SuspendUserRequest };
+export type Admin_suspendUserInput = Admin_suspendUserParams & { data: SuspendUserRequest };
 
-export type HealthDomain_checkInput = Record<string, never>;
+export type Health_checkInput = Record<string, never>;

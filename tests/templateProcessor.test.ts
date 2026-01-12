@@ -30,7 +30,7 @@ describe('templateProcessor', () => {
           get: {
             operationId: 'getUsers',
             summary: 'Get users list',
-            'x-micro-contracts-domain': 'UserDomain',
+            'x-micro-contracts-service': 'User',
             'x-micro-contracts-method': 'getUsers',
             'x-micro-contracts-published': true,
             parameters: [
@@ -50,7 +50,7 @@ describe('templateProcessor', () => {
           post: {
             operationId: 'createUser',
             summary: 'Create user',
-            'x-micro-contracts-domain': 'UserDomain',
+            'x-micro-contracts-service': 'User',
             'x-micro-contracts-method': 'createUser',
             requestBody: {
               required: true,
@@ -76,7 +76,7 @@ describe('templateProcessor', () => {
           get: {
             operationId: 'getUserById',
             summary: 'Get user by ID',
-            'x-micro-contracts-domain': 'UserDomain',
+            'x-micro-contracts-service': 'User',
             'x-micro-contracts-method': 'getUserById',
             parameters: [
               { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
@@ -111,19 +111,19 @@ describe('templateProcessor', () => {
       expect(context.routes).toHaveLength(3);
       expect(context.routes[0].path).toBe('/api/users');
       expect(context.routes[0].method).toBe('get');
-      expect(context.routes[0].domain).toBe('UserDomain');
-      expect(context.routes[0].domainMethod).toBe('getUsers');
+      expect(context.routes[0].service).toBe('User');
+      expect(context.routes[0].serviceMethod).toBe('getUsers');
     });
 
-    it('should extract domains from routes', () => {
+    it('should extract services from routes', () => {
       const context = buildTemplateContext(testSpec, 'core');
 
-      expect(context.domains).toHaveLength(1);
-      expect(context.domains[0].name).toBe('UserDomain');
-      expect(context.domains[0].key).toBe('user');
-      expect(context.domains[0].methods).toContain('getUsers');
-      expect(context.domains[0].methods).toContain('createUser');
-      expect(context.domains[0].methods).toContain('getUserById');
+      expect(context.services).toHaveLength(1);
+      expect(context.services[0].name).toBe('User');
+      expect(context.services[0].key).toBe('user');
+      expect(context.services[0].methods).toContain('getUsers');
+      expect(context.services[0].methods).toContain('createUser');
+      expect(context.services[0].methods).toContain('getUserById');
     });
 
     it('should convert path params to Fastify format', () => {
@@ -151,12 +151,12 @@ describe('templateProcessor', () => {
 
     it('should set correct module name and paths', () => {
       const context = buildTemplateContext(testSpec, 'users', {
-        domainsPath: 'fastify.domains.users',
+        servicesPath: 'fastify.services.users',
         contractPackage: '@myapp/contract/users',
       });
 
       expect(context.moduleName).toBe('users');
-      expect(context.domainsPath).toBe('fastify.domains.users');
+      expect(context.servicesPath).toBe('fastify.services.users');
       expect(context.contractPackage).toBe('@myapp/contract/users');
     });
 

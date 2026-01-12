@@ -1,27 +1,27 @@
 /**
- * AdminDomain Domain API Interface
+ * Admin Service API Interface
  * Auto-generated from OpenAPI specification
  * DO NOT EDIT MANUALLY
  */
 
 import type {
-  AdminDomain_getStatsInput,
-  AdminDomain_suspendUserInput,
+  Admin_getStatsInput,
+  Admin_suspendUserInput,
   SystemStats,
   User,
 } from '../schemas/types.js';
 
-export interface AdminDomainApi {
+export interface AdminServiceApi {
   /**
    * GET /api/admin/stats
    * @internal Not included in public contract
    */
-  getStats(input: AdminDomain_getStatsInput): Promise<SystemStats>;
+  getStats(input: Admin_getStatsInput): Promise<SystemStats>;
 
   /**
    * POST /api/admin/users/{id}/suspend
    * @internal Not included in public contract
    */
-  suspendUser(input: AdminDomain_suspendUserInput): Promise<User>;
+  suspendUser(input: Admin_suspendUserInput): Promise<User>;
 
 }

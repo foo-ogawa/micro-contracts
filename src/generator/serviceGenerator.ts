@@ -1,53 +1,53 @@
 /**
- * Domain interface generator from OpenAPI specification
+ * Service interface generator from OpenAPI specification
  * 
- * Generates TypeScript interfaces grouped by x-domain extension
+ * Generates TypeScript interfaces grouped by x-micro-contracts-service extension
  */
 
 import type { 
   OpenAPISpec, 
   OperationObject,
   ParameterObject,
-  DomainInfo,
-  DomainMethodInfo,
+  ServiceInfo,
+  ServiceMethodInfo,
 } from '../types.js';
 import { isReference, getRefName } from '../types.js';
 
-export interface DomainGeneratorOptions {
+export interface ServiceGeneratorOptions {
   /** Only include public endpoints (x-public: true) */
   publicOnly?: boolean;
 }
 
 /**
- * Generate domain interface files
- * Returns a map of domain name to generated content
+ * Generate service interface files
+ * Returns a map of service name to generated content
  */
-export function generateDomainInterfaces(
+export function generateServiceInterfaces(
   spec: OpenAPISpec,
-  options: DomainGeneratorOptions = {}
+  options: ServiceGeneratorOptions = {}
 ): Map<string, string> {
   const { publicOnly = false } = options;
   
-  const domains = extractDomainInfo(spec, publicOnly);
+  const services = extractServiceInfo(spec, publicOnly);
   const result = new Map<string, string>();
   
-  for (const domain of domains) {
-    const content = generateDomainInterface(domain, spec);
-    result.set(domain.name, content);
+  for (const service of services) {
+    const content = generateServiceInterface(service, spec);
+    result.set(service.name, content);
   }
   
   // Generate index.ts
-  const indexContent = generateDomainsIndex(domains);
+  const indexContent = generateServicesIndex(services);
   result.set('index', indexContent);
   
   return result;
 }
 
 /**
- * Extract domain information from OpenAPI spec
+ * Extract service information from OpenAPI spec
  */
-function extractDomainInfo(spec: OpenAPISpec, publicOnly: boolean): DomainInfo[] {
-  const domainsMap = new Map<string, DomainMethodInfo[]>();
+function extractServiceInfo(spec: OpenAPISpec, publicOnly: boolean): ServiceInfo[] {
+  const servicesMap = new Map<string, ServiceMethodInfo[]>();
   
   for (const [path, pathItem] of Object.entries(spec.paths)) {
     for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
@@ -55,24 +55,24 @@ function extractDomainInfo(spec: OpenAPISpec, publicOnly: boolean): DomainInfo[]
       if (!operation) continue;
       
       // Canonical extension names only
-      const domain = operation['x-micro-contracts-domain'];
-      const domainMethod = operation['x-micro-contracts-method'];
+      const service = operation['x-micro-contracts-service'];
+      const serviceMethod = operation['x-micro-contracts-method'];
       const isPublished = operation['x-micro-contracts-published'] === true;
       
-      if (!domain || !domainMethod) continue;
+      if (!service || !serviceMethod) continue;
       if (publicOnly && !isPublished) continue;
       
       const methodInfo = extractMethodInfo(path, method, operation, spec);
       if (!methodInfo) continue;
       
-      if (!domainsMap.has(domain)) {
-        domainsMap.set(domain, []);
+      if (!servicesMap.has(service)) {
+        servicesMap.set(service, []);
       }
-      domainsMap.get(domain)!.push(methodInfo);
+      servicesMap.get(service)!.push(methodInfo);
     }
   }
   
-  return Array.from(domainsMap.entries())
+  return Array.from(servicesMap.entries())
     .map(([name, methods]) => ({ name, methods }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -85,16 +85,16 @@ function extractMethodInfo(
   httpMethod: string,
   operation: OperationObject,
   spec: OpenAPISpec
-): DomainMethodInfo | null {
+): ServiceMethodInfo | null {
   // Canonical extension names only
-  const domainName = operation['x-micro-contracts-domain'];
-  const domainMethod = operation['x-micro-contracts-method'];
-  if (!domainMethod) return null;
+  const serviceName = operation['x-micro-contracts-service'];
+  const serviceMethod = operation['x-micro-contracts-method'];
+  if (!serviceMethod) return null;
   
-  const operationId = operation.operationId || domainMethod;
-  // Use domain + _ + method for type names (clearer separation)
-  const typeNameBase = domainName && domainMethod 
-    ? `${domainName}_${domainMethod}`
+  const operationId = operation.operationId || serviceMethod;
+  // Use service + _ + method for type names (clearer separation)
+  const typeNameBase = serviceName && serviceMethod 
+    ? `${serviceName}_${serviceMethod}`
     : operationId.replace(/[^a-zA-Z0-9]/g, '_');
   const isPublished = operation['x-micro-contracts-published'] === true;
   
@@ -145,7 +145,7 @@ function extractMethodInfo(
   const paramsType = hasParams ? `${typeNameBase}Params` : undefined;
   
   return {
-    name: domainMethod,
+    name: serviceMethod,
     operationId,
     httpMethod,
     path,
@@ -157,13 +157,13 @@ function extractMethodInfo(
 }
 
 /**
- * Generate domain interface content
+ * Generate service interface content
  */
-function generateDomainInterface(domain: DomainInfo, spec: OpenAPISpec): string {
+function generateServiceInterface(service: ServiceInfo, spec: OpenAPISpec): string {
   const lines: string[] = [];
   
   lines.push('/**');
-  lines.push(` * ${domain.name} Domain API Interface`);
+  lines.push(` * ${service.name} Service API Interface`);
   lines.push(' * Auto-generated from OpenAPI specification');
   lines.push(' * DO NOT EDIT MANUALLY');
   lines.push(' */');
@@ -171,9 +171,9 @@ function generateDomainInterface(domain: DomainInfo, spec: OpenAPISpec): string 
   
   // Collect all types needed
   const types = new Set<string>();
-  for (const method of domain.methods) {
+  for (const method of service.methods) {
     // Always use Input type (even for parameterless operations)
-    const inputTypeName = `${domain.name}_${method.name}Input`;
+    const inputTypeName = `${service.name}_${method.name}Input`;
     types.add(inputTypeName);
     if (method.responseType && method.responseType !== 'void') types.add(method.responseType);
   }
@@ -188,9 +188,9 @@ function generateDomainInterface(domain: DomainInfo, spec: OpenAPISpec): string 
   }
   
   // Generate interface
-  lines.push(`export interface ${domain.name}Api {`);
+  lines.push(`export interface ${service.name}ServiceApi {`);
   
-  for (const method of domain.methods) {
+  for (const method of service.methods) {
     // JSDoc comment
     lines.push('  /**');
     lines.push(`   * ${method.httpMethod.toUpperCase()} ${method.path}`);
@@ -200,7 +200,7 @@ function generateDomainInterface(domain: DomainInfo, spec: OpenAPISpec): string 
     lines.push('   */');
     
     // Method signature with single Input parameter (always present)
-    const inputTypeName = `${domain.name}_${method.name}Input`;
+    const inputTypeName = `${service.name}_${method.name}Input`;
     const returnType = method.responseType || 'void';
     const returnTypeStr = returnType === 'void' ? 'Promise<void>' : `Promise<${returnType}>`;
     
@@ -214,40 +214,40 @@ function generateDomainInterface(domain: DomainInfo, spec: OpenAPISpec): string 
 }
 
 /**
- * Generate domains index.ts
+ * Generate services index.ts
  */
-function generateDomainsIndex(domains: DomainInfo[]): string {
+function generateServicesIndex(services: ServiceInfo[]): string {
   const lines: string[] = [];
   
   lines.push('/**');
-  lines.push(' * Domain API Interfaces');
+  lines.push(' * Service API Interfaces');
   lines.push(' * Auto-generated from OpenAPI specification');
   lines.push(' * DO NOT EDIT MANUALLY');
   lines.push(' */');
   lines.push('');
   
-  // Import domain APIs for use in DomainRegistry
-  for (const domain of domains) {
-    lines.push(`import type { ${domain.name}Api } from './${domain.name}Api.js';`);
+  // Import service APIs for use in ServiceRegistry
+  for (const service of services) {
+    lines.push(`import type { ${service.name}ServiceApi } from './${service.name}ServiceApi.js';`);
   }
   lines.push('');
   
-  // Re-export individual domain APIs
-  for (const domain of domains) {
-    lines.push(`export type { ${domain.name}Api };`);
+  // Re-export individual service APIs
+  for (const service of services) {
+    lines.push(`export type { ${service.name}ServiceApi };`);
   }
   
-  // Generate DomainRegistry interface for DI Container
+  // Generate ServiceRegistry interface for DI Container
   lines.push('');
   lines.push('/**');
-  lines.push(' * Domain Registry for Dependency Injection');
+  lines.push(' * Service Registry for Dependency Injection');
   lines.push(' * Use this interface for DI container type definitions');
   lines.push(' */');
-  lines.push('export interface DomainRegistry {');
+  lines.push('export interface ServiceRegistry {');
   
-  for (const domain of domains) {
-    const propertyName = domainNameToProperty(domain.name);
-    lines.push(`  ${propertyName}: ${domain.name}Api;`);
+  for (const service of services) {
+    const propertyName = serviceNameToProperty(service.name);
+    lines.push(`  ${propertyName}: ${service.name}ServiceApi;`);
   }
   
   lines.push('}');
@@ -256,12 +256,12 @@ function generateDomainsIndex(domains: DomainInfo[]): string {
 }
 
 /**
- * Convert domain name to property name
- * e.g., "AccountDomain" -> "account", "ExtensionInstanceDomain" -> "extensionInstance"
+ * Convert service name to property name
+ * e.g., "Account" -> "account", "ExtensionInstance" -> "extensionInstance"
  */
-function domainNameToProperty(domainName: string): string {
-  // Remove "Domain" suffix if present
-  const baseName = domainName.replace(/Domain$/, '');
+function serviceNameToProperty(serviceName: string): string {
+  // Remove "Service" suffix if present
+  const baseName = serviceName.replace(/Service$/, '');
   // Convert to camelCase (first letter lowercase)
   return baseName.charAt(0).toLowerCase() + baseName.slice(1);
 }
@@ -269,4 +269,3 @@ function domainNameToProperty(domainName: string): string {
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
-

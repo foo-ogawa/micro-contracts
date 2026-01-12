@@ -4,13 +4,13 @@
  * 
  * DO NOT EDIT MANUALLY
  * 
- * Client API matches Domain API signature (single input object).
+ * Client API matches Service API signature (single input object).
  * Internally maps input to HTTP request (path params, query params, body).
  */
 
 import type {
-  BillingApi,
-} from '@project/contract/billing/domains';
+  BillingServiceApi,
+} from '@project/contract/billing/services';
 import type {
   Billing_createInvoiceInput,
   Billing_getInvoiceByIdInput,
@@ -54,7 +54,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 // ==========================================================================
 // Billing API Client
 // ==========================================================================
-export const billingApi: BillingApi = {
+export const billingApi: BillingServiceApi = {
   /**
    * GET /api/billing/invoices
    * List all invoices

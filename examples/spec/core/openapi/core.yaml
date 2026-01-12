@@ -5,7 +5,7 @@ info:
     Example API demonstrating micro-contracts features:
     - Cross-cutting concerns with x-middleware
     - Public/private endpoint separation
-    - Domain-driven code generation
+    - Service-driven code generation
   version: 1.0.0
   contact:
     name: API Support
@@ -37,7 +37,7 @@ paths:
       summary: Get users list
       description: Retrieve a paginated list of all users in the system.
       operationId: getUsers
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: getUsers
       x-micro-contracts-published: true
       x-middleware:
@@ -67,7 +67,7 @@ paths:
       summary: Create new user
       description: Create a new user account with the specified email and name.
       operationId: createUser
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: createUser
       x-micro-contracts-published: true
       x-middleware:
@@ -98,7 +98,7 @@ paths:
       summary: Get user by ID
       description: Retrieve detailed information for a specific user by their unique ID.
       operationId: getUserById
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: getUserById
       x-micro-contracts-published: true
       x-middleware:
@@ -129,7 +129,7 @@ paths:
       summary: Update user
       description: Update an existing user's profile information.
       operationId: updateUser
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: updateUser
       x-middleware:
         - requireAuth
@@ -171,7 +171,7 @@ paths:
       summary: Delete user
       description: Permanently delete a user account. Requires admin privileges.
       operationId: deleteUser
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: deleteUser
       x-middleware:
         - requireAuth
@@ -196,7 +196,7 @@ paths:
       summary: Get tenant-scoped data
       description: Retrieve data scoped to the current tenant context.
       operationId: getTenantData
-      x-micro-contracts-domain: TenantDomain
+      x-micro-contracts-service: Tenant
       x-micro-contracts-method: getData
       x-middleware:
         - requireAuth
@@ -215,7 +215,7 @@ paths:
       summary: Create tenant data
       description: Create new data entry within the current tenant scope.
       operationId: createTenantData
-      x-micro-contracts-domain: TenantDomain
+      x-micro-contracts-service: Tenant
       x-micro-contracts-method: createData
       x-middleware:
         - requireAuth
@@ -244,7 +244,7 @@ paths:
       summary: Get system statistics
       description: Retrieve system-wide statistics including user counts and uptime. Admin only.
       operationId: getSystemStats
-      x-micro-contracts-domain: AdminDomain
+      x-micro-contracts-service: Admin
       x-micro-contracts-method: getStats
       x-middleware:
         - requireAuth
@@ -263,7 +263,7 @@ paths:
       summary: Suspend user account
       description: Suspend a user account with the specified reason. Admin only.
       operationId: suspendUser
-      x-micro-contracts-domain: AdminDomain
+      x-micro-contracts-service: Admin
       x-micro-contracts-method: suspendUser
       x-middleware:
         - requireAuth
@@ -298,7 +298,7 @@ paths:
       summary: Health check
       description: Check the health status of the service. No authentication required.
       operationId: healthCheck
-      x-micro-contracts-domain: HealthDomain
+      x-micro-contracts-service: Health
       x-micro-contracts-method: check
       x-micro-contracts-published: true
       responses:

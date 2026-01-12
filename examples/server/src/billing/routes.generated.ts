@@ -14,7 +14,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     fastify.addSchema(schema);
   }
 
-  const { billing } = fastify.domains.billing;
+  const { billing } = fastify.services.billing;
   const handlers = fastify.overlayHandlers;
 
   // GET /api/billing/invoices [PUBLISHED]

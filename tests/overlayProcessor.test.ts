@@ -24,8 +24,8 @@ describe('overlayProcessor', () => {
         '/api/users': {
           get: {
             operationId: 'getUsers',
-            'x-domain': 'UserDomain',
-            'x-method': 'getUsers',
+            'x-micro-contracts-service': 'User',
+            'x-micro-contracts-method': 'getUsers',
             'x-middleware': ['requireAuth'],
             responses: {
               '200': { description: 'Success' },
@@ -33,8 +33,8 @@ describe('overlayProcessor', () => {
           },
           post: {
             operationId: 'createUser',
-            'x-domain': 'UserDomain',
-            'x-method': 'createUser',
+            'x-micro-contracts-service': 'User',
+            'x-micro-contracts-method': 'createUser',
             'x-middleware': ['requireAuth', 'tenantIsolation'],
             responses: {
               '201': { description: 'Created' },
@@ -44,8 +44,8 @@ describe('overlayProcessor', () => {
         '/api/admin/stats': {
           get: {
             operationId: 'getStats',
-            'x-domain': 'AdminDomain',
-            'x-method': 'getStats',
+            'x-micro-contracts-service': 'Admin',
+            'x-micro-contracts-method': 'getStats',
             'x-middleware': ['requireAuth', 'requireAdmin'],
             responses: {
               '200': { description: 'Success' },

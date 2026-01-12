@@ -20,7 +20,7 @@ paths:
       tags: [Entries]
       summary: Get journal entries
       operationId: getEntries
-      x-micro-contracts-domain: EntryDomain
+      x-micro-contracts-service: Entry
       x-micro-contracts-method: getEntries
       x-scope: external
       parameters:
@@ -75,7 +75,7 @@ paths:
       tags: [Entries]
       summary: Save journal entries (batch UPSERT)
       operationId: saveEntries
-      x-micro-contracts-domain: EntryDomain
+      x-micro-contracts-service: Entry
       x-micro-contracts-method: saveEntries
       x-scope: external
       requestBody:
@@ -103,7 +103,7 @@ paths:
       tags: [Entries]
       summary: Get journal entry schema
       operationId: getJournalSchema
-      x-micro-contracts-domain: EntryDomain
+      x-micro-contracts-service: Entry
       x-micro-contracts-method: getSchema
       x-scope: internal
       responses:
@@ -119,7 +119,7 @@ paths:
       tags: [Accounts]
       summary: Get account list
       operationId: getAccounts
-      x-micro-contracts-domain: AccountDomain
+      x-micro-contracts-service: Account
       x-micro-contracts-method: getAccounts
       x-scope: external
       parameters:
@@ -147,7 +147,7 @@ paths:
       tags: [Accounts]
       summary: Save accounts (batch UPSERT)
       operationId: saveAccounts
-      x-micro-contracts-domain: AccountDomain
+      x-micro-contracts-service: Account
       x-micro-contracts-method: saveAccounts
       x-scope: external
       requestBody:
@@ -175,7 +175,7 @@ paths:
       tags: [Accounts]
       summary: Get account by code
       operationId: getAccountByCode
-      x-micro-contracts-domain: AccountDomain
+      x-micro-contracts-service: Account
       x-micro-contracts-method: getByCode
       x-scope: internal
       parameters:

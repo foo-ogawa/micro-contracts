@@ -14,21 +14,21 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     fastify.addSchema(schema);
   }
 
-  const { admin, health, tenant, user } = fastify.domains.core;
+  const { admin, health, tenant, user } = fastify.services.core;
   const handlers = fastify.overlayHandlers;
 
   // GET /api/users [PUBLISHED]
   fastify.get('/api/users', {
     schema: {
-      querystring: { $ref: 'UserDomain_getUsersParams#' },
+      querystring: { $ref: 'User_getUsersParams#' },
       response: { 200: { $ref: 'UserListResponse#' },  },
     },
   }, async (req: FastifyRequest, reply: FastifyReply) => {
     const result = await runOverlays('getUsers', handlers, toHttpRequest(req));
     if (!result.success) return sendError(reply, result.error);
     // Build input object (always required, even if empty)
-    const input: types.UserDomain_getUsersInput = {
-      ...(req.query as types.UserDomain_getUsersParams),
+    const input: types.User_getUsersInput = {
+      ...(req.query as types.User_getUsersParams),
     };
     return user.getUsers(input);
   });
@@ -43,7 +43,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const result = await runOverlays('createUser', handlers, toHttpRequest(req));
     if (!result.success) return sendError(reply, result.error);
     // Build input object (always required, even if empty)
-    const input: types.UserDomain_createUserInput = {
+    const input: types.User_createUserInput = {
       data: req.body as types.CreateUserRequest,
     };
     return user.createUser(input);
@@ -52,15 +52,15 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   // GET /api/users/{id} [PUBLISHED]
   fastify.get('/api/users/:id', {
     schema: {
-      params: { $ref: 'UserDomain_getUserByIdParams#' },
+      params: { $ref: 'User_getUserByIdParams#' },
       response: { 200: { $ref: 'User#' },  },
     },
   }, async (req: FastifyRequest, reply: FastifyReply) => {
     const result = await runOverlays('getUserById', handlers, toHttpRequest(req));
     if (!result.success) return sendError(reply, result.error);
     // Build input object (always required, even if empty)
-    const input: types.UserDomain_getUserByIdInput = {
-      ...(req.params as types.UserDomain_getUserByIdParams),
+    const input: types.User_getUserByIdInput = {
+      ...(req.params as types.User_getUserByIdParams),
     };
     return user.getUserById(input);
   });
@@ -68,7 +68,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   // PUT /api/users/{id}
   fastify.put('/api/users/:id', {
     schema: {
-      params: { $ref: 'UserDomain_updateUserParams#' },
+      params: { $ref: 'User_updateUserParams#' },
       body: { $ref: 'UpdateUserRequest#' },
       response: { 200: { $ref: 'User#' },  },
     },
@@ -76,8 +76,8 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const result = await runOverlays('updateUser', handlers, toHttpRequest(req));
     if (!result.success) return sendError(reply, result.error);
     // Build input object (always required, even if empty)
-    const input: types.UserDomain_updateUserInput = {
-      ...(req.params as types.UserDomain_updateUserParams),
+    const input: types.User_updateUserInput = {
+      ...(req.params as types.User_updateUserParams),
       data: req.body as types.UpdateUserRequest,
     };
     return user.updateUser(input);
@@ -86,15 +86,15 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   // DELETE /api/users/{id}
   fastify.delete('/api/users/:id', {
     schema: {
-      params: { $ref: 'UserDomain_deleteUserParams#' },
+      params: { $ref: 'User_deleteUserParams#' },
       response: {  },
     },
   }, async (req: FastifyRequest, reply: FastifyReply) => {
     const result = await runOverlays('deleteUser', handlers, toHttpRequest(req));
     if (!result.success) return sendError(reply, result.error);
     // Build input object (always required, even if empty)
-    const input: types.UserDomain_deleteUserInput = {
-      ...(req.params as types.UserDomain_deleteUserParams),
+    const input: types.User_deleteUserInput = {
+      ...(req.params as types.User_deleteUserParams),
     };
     return user.deleteUser(input);
   });
@@ -108,7 +108,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const result = await runOverlays('getTenantData', handlers, toHttpRequest(req));
     if (!result.success) return sendError(reply, result.error);
     // Build input object (always required, even if empty)
-    const input: types.TenantDomain_getDataInput = {
+    const input: types.Tenant_getDataInput = {
     };
     return tenant.getData(input);
   });
@@ -123,7 +123,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const result = await runOverlays('createTenantData', handlers, toHttpRequest(req));
     if (!result.success) return sendError(reply, result.error);
     // Build input object (always required, even if empty)
-    const input: types.TenantDomain_createDataInput = {
+    const input: types.Tenant_createDataInput = {
       data: req.body as types.CreateTenantDataRequest,
     };
     return tenant.createData(input);
@@ -138,7 +138,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const result = await runOverlays('getSystemStats', handlers, toHttpRequest(req));
     if (!result.success) return sendError(reply, result.error);
     // Build input object (always required, even if empty)
-    const input: types.AdminDomain_getStatsInput = {
+    const input: types.Admin_getStatsInput = {
     };
     return admin.getStats(input);
   });
@@ -146,7 +146,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   // POST /api/admin/users/{id}/suspend
   fastify.post('/api/admin/users/:id/suspend', {
     schema: {
-      params: { $ref: 'AdminDomain_suspendUserParams#' },
+      params: { $ref: 'Admin_suspendUserParams#' },
       body: { $ref: 'SuspendUserRequest#' },
       response: { 200: { $ref: 'User#' },  },
     },
@@ -154,8 +154,8 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     const result = await runOverlays('suspendUser', handlers, toHttpRequest(req));
     if (!result.success) return sendError(reply, result.error);
     // Build input object (always required, even if empty)
-    const input: types.AdminDomain_suspendUserInput = {
-      ...(req.params as types.AdminDomain_suspendUserParams),
+    const input: types.Admin_suspendUserInput = {
+      ...(req.params as types.Admin_suspendUserParams),
       data: req.body as types.SuspendUserRequest,
     };
     return admin.suspendUser(input);
@@ -168,7 +168,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     },
   }, async (req: FastifyRequest, reply: FastifyReply) => {
     // Build input object (always required, even if empty)
-    const input: types.HealthDomain_checkInput = {
+    const input: types.Health_checkInput = {
     };
     return health.check(input);
   });

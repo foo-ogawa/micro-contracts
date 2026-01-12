@@ -7,4 +7,4 @@
 
 // Re-exported types from core (contract-published)
 export type * from '../../../contract-published/core/schemas/types.js';
-export type * from '../../../contract-published/core/domains/index.js';
+export type * from '../../../contract-published/core/services/index.js';

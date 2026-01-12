@@ -232,8 +232,8 @@ export const HealthStatus = {
   } as const;
 
 // Parameter schemas
-export const UserDomain_getUsersParams = {
-    "$id": "UserDomain_getUsersParams",
+export const User_getUsersParams = {
+    "$id": "User_getUsersParams",
     "type": "object",
     "properties": {
       "limit": {
@@ -248,8 +248,8 @@ export const UserDomain_getUsersParams = {
     }
   } as const;
 
-export const UserDomain_getUserByIdParams = {
-    "$id": "UserDomain_getUserByIdParams",
+export const User_getUserByIdParams = {
+    "$id": "User_getUserByIdParams",
     "type": "object",
     "properties": {
       "id": {
@@ -262,8 +262,8 @@ export const UserDomain_getUserByIdParams = {
     ]
   } as const;
 
-export const UserDomain_updateUserParams = {
-    "$id": "UserDomain_updateUserParams",
+export const User_updateUserParams = {
+    "$id": "User_updateUserParams",
     "type": "object",
     "properties": {
       "id": {
@@ -276,8 +276,8 @@ export const UserDomain_updateUserParams = {
     ]
   } as const;
 
-export const UserDomain_deleteUserParams = {
-    "$id": "UserDomain_deleteUserParams",
+export const User_deleteUserParams = {
+    "$id": "User_deleteUserParams",
     "type": "object",
     "properties": {
       "id": {
@@ -290,8 +290,8 @@ export const UserDomain_deleteUserParams = {
     ]
   } as const;
 
-export const AdminDomain_suspendUserParams = {
-    "$id": "AdminDomain_suspendUserParams",
+export const Admin_suspendUserParams = {
+    "$id": "Admin_suspendUserParams",
     "type": "object",
     "properties": {
       "id": {
@@ -316,9 +316,9 @@ export const allSchemas = [
   SystemStats,
   SuspendUserRequest,
   HealthStatus,
-  UserDomain_getUsersParams,
-  UserDomain_getUserByIdParams,
-  UserDomain_updateUserParams,
-  UserDomain_deleteUserParams,
-  AdminDomain_suspendUserParams,
+  User_getUsersParams,
+  User_getUserByIdParams,
+  User_updateUserParams,
+  User_deleteUserParams,
+  Admin_suspendUserParams,
 ] as const;

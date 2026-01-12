@@ -9,37 +9,37 @@
  */
 
 import type {
-  AdminDomainApi,
-  HealthDomainApi,
-  TenantDomainApi,
-  UserDomainApi,
-} from '@project/contract/core/domains';
+  AdminServiceApi,
+  HealthServiceApi,
+  TenantServiceApi,
+  UserServiceApi,
+} from '@project/contract/core/services';
 import type {
-  AdminDomain_getStatsInput,
-  AdminDomain_suspendUserInput,
-  AdminDomain_suspendUserParams,
+  Admin_getStatsInput,
+  Admin_suspendUserInput,
+  Admin_suspendUserParams,
   CreateTenantDataRequest,
   CreateUserRequest,
-  HealthDomain_checkInput,
   HealthStatus,
+  Health_checkInput,
   ProblemDetails,
   SuspendUserRequest,
   SystemStats,
   TenantData,
-  TenantDomain_createDataInput,
-  TenantDomain_getDataInput,
+  Tenant_createDataInput,
+  Tenant_getDataInput,
   UpdateUserRequest,
   User,
-  UserDomain_createUserInput,
-  UserDomain_deleteUserInput,
-  UserDomain_deleteUserParams,
-  UserDomain_getUserByIdInput,
-  UserDomain_getUserByIdParams,
-  UserDomain_getUsersInput,
-  UserDomain_getUsersParams,
-  UserDomain_updateUserInput,
-  UserDomain_updateUserParams,
   UserListResponse,
+  User_createUserInput,
+  User_deleteUserInput,
+  User_deleteUserParams,
+  User_getUserByIdInput,
+  User_getUserByIdParams,
+  User_getUsersInput,
+  User_getUsersParams,
+  User_updateUserInput,
+  User_updateUserParams,
 } from '@project/contract/core/schemas';
 import { ApiError } from '@project/contract/core/errors';
 
@@ -67,15 +67,15 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 // ==========================================================================
-// AdminDomain API Client
+// Admin API Client
 // ==========================================================================
-export const adminApi: AdminDomainApi = {
+export const adminApi: AdminServiceApi = {
   /**
    * GET /api/admin/stats
    * Get system statistics
    
    */
-  async getStats(input: AdminDomain_getStatsInput): Promise<SystemStats> {
+  async getStats(input: Admin_getStatsInput): Promise<SystemStats> {
     const url = `${BASE_URL}/api/admin/stats`;
     const res = await fetch(url);
     return handleResponse<SystemStats>(res);
@@ -86,7 +86,7 @@ export const adminApi: AdminDomainApi = {
    * Suspend user account
    
    */
-  async suspendUser(input: AdminDomain_suspendUserInput): Promise<User> {
+  async suspendUser(input: Admin_suspendUserInput): Promise<User> {
     const url = `${BASE_URL}/api/admin/users/${input.id}/suspend`;
     const res = await fetch(url, {
       method: 'POST',
@@ -99,15 +99,15 @@ export const adminApi: AdminDomainApi = {
 };
 
 // ==========================================================================
-// HealthDomain API Client
+// Health API Client
 // ==========================================================================
-export const healthApi: HealthDomainApi = {
+export const healthApi: HealthServiceApi = {
   /**
    * GET /api/health
    * Health check
    * @published
    */
-  async check(input: HealthDomain_checkInput): Promise<HealthStatus> {
+  async check(input: Health_checkInput): Promise<HealthStatus> {
     const url = `${BASE_URL}/api/health`;
     const res = await fetch(url);
     return handleResponse<HealthStatus>(res);
@@ -116,15 +116,15 @@ export const healthApi: HealthDomainApi = {
 };
 
 // ==========================================================================
-// TenantDomain API Client
+// Tenant API Client
 // ==========================================================================
-export const tenantApi: TenantDomainApi = {
+export const tenantApi: TenantServiceApi = {
   /**
    * GET /api/tenant/data
    * Get tenant-scoped data
    
    */
-  async getData(input: TenantDomain_getDataInput): Promise<TenantData> {
+  async getData(input: Tenant_getDataInput): Promise<TenantData> {
     const url = `${BASE_URL}/api/tenant/data`;
     const res = await fetch(url);
     return handleResponse<TenantData>(res);
@@ -135,7 +135,7 @@ export const tenantApi: TenantDomainApi = {
    * Create tenant data
    
    */
-  async createData(input: TenantDomain_createDataInput): Promise<TenantData> {
+  async createData(input: Tenant_createDataInput): Promise<TenantData> {
     const url = `${BASE_URL}/api/tenant/data`;
     const res = await fetch(url, {
       method: 'POST',
@@ -148,15 +148,15 @@ export const tenantApi: TenantDomainApi = {
 };
 
 // ==========================================================================
-// UserDomain API Client
+// User API Client
 // ==========================================================================
-export const userApi: UserDomainApi = {
+export const userApi: UserServiceApi = {
   /**
    * GET /api/users
    * Get users list
    * @published
    */
-  async getUsers(input: UserDomain_getUsersInput): Promise<UserListResponse> {
+  async getUsers(input: User_getUsersInput): Promise<UserListResponse> {
     const searchParams = new URLSearchParams();
     if (input.limit !== undefined) searchParams.set('limit', String(input.limit));
     if (input.offset !== undefined) searchParams.set('offset', String(input.offset));
@@ -170,7 +170,7 @@ export const userApi: UserDomainApi = {
    * Create new user
    * @published
    */
-  async createUser(input: UserDomain_createUserInput): Promise<User> {
+  async createUser(input: User_createUserInput): Promise<User> {
     const url = `${BASE_URL}/api/users`;
     const res = await fetch(url, {
       method: 'POST',
@@ -185,7 +185,7 @@ export const userApi: UserDomainApi = {
    * Get user by ID
    * @published
    */
-  async getUserById(input: UserDomain_getUserByIdInput): Promise<User> {
+  async getUserById(input: User_getUserByIdInput): Promise<User> {
     const url = `${BASE_URL}/api/users/${input.id}`;
     const res = await fetch(url);
     return handleResponse<User>(res);
@@ -196,7 +196,7 @@ export const userApi: UserDomainApi = {
    * Update user
    
    */
-  async updateUser(input: UserDomain_updateUserInput): Promise<User> {
+  async updateUser(input: User_updateUserInput): Promise<User> {
     const url = `${BASE_URL}/api/users/${input.id}`;
     const res = await fetch(url, {
       method: 'PUT',
@@ -211,7 +211,7 @@ export const userApi: UserDomainApi = {
    * Delete user
    
    */
-  async deleteUser(input: UserDomain_deleteUserInput): Promise<void> {
+  async deleteUser(input: User_deleteUserInput): Promise<void> {
     const url = `${BASE_URL}/api/users/${input.id}`;
     const res = await fetch(url, { method: 'DELETE' });
     await handleResponse<void>(res);

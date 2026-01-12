@@ -13,7 +13,7 @@
 
 /**
  * Result returned by overlay handlers
- * - success: true → continue to next handler/domain
+ * - success: true → continue to next handler/service
  * - success: false → return error response
  */
 export interface OverlayResult<TContext = unknown> {
@@ -23,7 +23,7 @@ export interface OverlayResult<TContext = unknown> {
     message: string;
     code?: string;
   };
-  /** Context passed to subsequent handlers and domain */
+  /** Context passed to subsequent handlers and service */
   context?: TContext;
 }
 

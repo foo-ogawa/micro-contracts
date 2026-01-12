@@ -22,7 +22,7 @@ defaults:
       output: server/src/{module}/routes.generated.ts
       template: spec/default/templates/fastify-routes.hbs
       config:
-        domainsPath: fastify.domains.{module}
+        servicesPath: fastify.services.{module}
         contractPackage: "@project/contract/{module}"
 
     frontend-client:

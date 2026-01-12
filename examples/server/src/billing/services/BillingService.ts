@@ -1,12 +1,12 @@
 /**
- * Billing Domain Implementation
+ * Billing Service Implementation
  * 
  * Demonstrates cross-module dependency via deps/ re-exports.
  * This module depends on core.User for user information.
  * 
- * @see https://github.com/example/micro-contracts/tree/main/examples/server/src/billing/domains
+ * @see https://github.com/example/micro-contracts/tree/main/examples/server/src/billing/services
  */
-import type { BillingApi } from '../../../../packages/contract/billing/domains/index.js';
+import type { BillingServiceApi } from '../../../../packages/contract/billing/services/index.js';
 import type {
   Billing_getInvoicesInput,
   Billing_createInvoiceInput,
@@ -19,7 +19,7 @@ import type {
 
 // Import from deps/ - type-safe cross-module dependency
 // Only types declared in x-micro-contracts-depend-on are available
-import type { UserDomainApi } from '../../../../packages/contract/billing/deps/core.js';
+import type { UserServiceApi } from '../../../../packages/contract/billing/deps/core.js';
 
 // Mock data store
 const invoices: Invoice[] = [
@@ -44,9 +44,9 @@ const invoices: Invoice[] = [
   },
 ];
 
-export class BillingDomain implements BillingApi {
+export class BillingService implements BillingServiceApi {
   // Inject core.User dependency (declared in x-micro-contracts-depend-on)
-  constructor(private userDomain: UserDomainApi) {}
+  constructor(private userService: UserServiceApi) {}
 
   async getInvoices(input: Billing_getInvoicesInput): Promise<InvoiceListResponse> {
     let result = [...invoices];
@@ -69,7 +69,7 @@ export class BillingDomain implements BillingApi {
 
   async createInvoice(input: Billing_createInvoiceInput): Promise<Invoice> {
     // Verify user exists using cross-module dependency
-    const user = await this.userDomain.getUserById({ id: input.data.userId });
+    const user = await this.userService.getUserById({ id: input.data.userId });
     if (!user) {
       throw new Error(`User not found: ${input.data.userId}`);
     }

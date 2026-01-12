@@ -9,10 +9,10 @@
  */
 
 import type {
-{{#each domainTypes}}
+{{#each serviceTypes}}
   {{this}},
 {{/each}}
-} from '{{contractPackage}}/domains';
+} from '{{contractPackage}}/services';
 import type {
 {{#each schemaTypes}}
   {{this}},
@@ -43,19 +43,19 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json();
 }
 
-{{#each domains}}
+{{#each services}}
 // ==========================================================================
 // {{name}} API Client
 // ==========================================================================
-export const {{key}}Api: {{name}}Api = {
+export const {{key}}Api: {{name}}ServiceApi = {
 {{#each ../routes}}
-{{#if (eq domain ../name)}}
+{{#if (eq service ../name)}}
   /**
    * {{httpMethod}} {{path}}
    {{#if summary}}* {{summary}}{{/if}}
    {{#if isPublished}}* @published{{/if}}
    */
-  async {{domainMethod}}(input: {{inputType}}): Promise<{{responseType}}> {
+  async {{serviceMethod}}(input: {{inputType}}): Promise<{{responseType}}> {
 {{#if queryParams.length}}
     const searchParams = new URLSearchParams();
 {{#each queryParams}}

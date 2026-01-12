@@ -9,13 +9,13 @@ rules:
   # micro-contracts specific rules
   # ==========================================================================
   
-  # Require x-micro-contracts-domain on all operations
-  operation-domain:
-    description: Operations must have x-micro-contracts-domain
+  # Require x-micro-contracts-service on all operations
+  operation-service:
+    description: Operations must have x-micro-contracts-service
     severity: error
     given: "$.paths[*][get,post,put,patch,delete]"
     then:
-      field: x-micro-contracts-domain
+      field: x-micro-contracts-service
       function: truthy
 
   # Require x-micro-contracts-method on all operations
@@ -29,7 +29,7 @@ rules:
 
   # Enforce canonical extension prefix
   canonical-extension-prefix:
-    description: Use x-micro-contracts-* prefix (not x-domain, x-method, etc.)
+    description: Use x-micro-contracts-* prefix (not x-service, x-method, etc.)
     severity: error
     given: "$.paths[*][get,post,put,patch,delete]"
     then:
@@ -38,7 +38,7 @@ rules:
         schema:
           not:
             anyOf:
-              - required: [x-domain]
+              - required: [x-service]
               - required: [x-method]
               - required: [x-public]
               - required: [x-private]

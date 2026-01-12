@@ -38,12 +38,12 @@ export function lintSpec(spec: OpenAPISpec, options: LintOptions = {}): LintResu
       
       const location = `${method.toUpperCase()} ${path}`;
       
-      // Check for x-micro-contracts-domain and x-micro-contracts-method
-      if (!operation['x-micro-contracts-domain']) {
+      // Check for x-micro-contracts-service and x-micro-contracts-method
+      if (!operation['x-micro-contracts-service']) {
         warnings.push({
           type: 'warning',
-          code: 'MISSING_X_DOMAIN',
-          message: `Missing x-micro-contracts-domain extension`,
+          code: 'MISSING_X_SERVICE',
+          message: `Missing x-micro-contracts-service extension`,
           path,
           location,
         });

@@ -3,9 +3,9 @@
  * 
  * This is the ONLY file that knows about:
  * - Framework (Fastify)
- * - Wiring (connecting domains and middleware to routes)
+ * - Wiring (connecting services and middleware to routes)
  * 
- * Domain and middleware implementations are framework-agnostic.
+ * Service and middleware implementations are framework-agnostic.
  * 
  * @see https://github.com/example/micro-contracts/tree/main/examples
  */
@@ -13,9 +13,9 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 
-// Import domain implementations (framework-agnostic)
-import { UserDomain, AdminDomain, TenantDomain, HealthDomain } from './core/domains/index.js';
-import { BillingDomain } from './billing/domains/index.js';
+// Import service implementations (framework-agnostic)
+import { UserService, AdminService, TenantService, HealthService } from './core/services/index.js';
+import { BillingService } from './billing/services/index.js';
 
 // Import overlay implementations (framework-agnostic)
 import * as coreOverlays from './core/overlays/index.js';
@@ -25,9 +25,9 @@ import * as billingOverlays from './billing/overlays/index.js';
 import { registerRoutes as registerCoreRoutes } from './core/routes.generated.js';
 import { registerRoutes as registerBillingRoutes } from './billing/routes.generated.js';
 
-// Import auto-generated domain registries
-import type { DomainRegistry as CoreDomainRegistry } from '@project/contract/core/domains/index.js';
-import type { DomainRegistry as BillingDomainRegistry } from '@project/contract/billing/domains/index.js';
+// Import auto-generated service registries
+import type { ServiceRegistry as CoreServiceRegistry } from '@project/contract/core/services/index.js';
+import type { ServiceRegistry as BillingServiceRegistry } from '@project/contract/billing/services/index.js';
 
 // Import auto-generated overlay registries
 import type { OverlayRegistry as CoreOverlayRegistry } from '@project/contract/core/overlays/index.js';
@@ -37,10 +37,10 @@ import type { OverlayRegistry as BillingOverlayRegistry } from '@project/contrac
 // Type Definitions (using auto-generated types)
 // =============================================================================
 
-// All domains type - composed from auto-generated registries
-interface AllDomains {
-  core: CoreDomainRegistry;
-  billing: BillingDomainRegistry;
+// All services type - composed from auto-generated registries
+interface AllServices {
+  core: CoreServiceRegistry;
+  billing: BillingServiceRegistry;
 }
 
 // Combined overlay registry (shared + module-specific)
@@ -52,7 +52,7 @@ type CombinedOverlayRegistry = CoreOverlayRegistry & BillingOverlayRegistry;
 
 declare module 'fastify' {
   interface FastifyInstance {
-    domains: AllDomains;
+    services: AllServices;
     overlayHandlers: CombinedOverlayRegistry;
   }
 }
@@ -82,32 +82,32 @@ async function buildServer(): Promise<FastifyInstance> {
   });
 
   // =========================================================================
-  // Initialize Domains
+  // Initialize Services
   // =========================================================================
   
-  // Core module domains (no external dependencies)
-  const userDomain = new UserDomain();
-  const adminDomain = new AdminDomain();
-  const tenantDomain = new TenantDomain();
-  const healthDomain = new HealthDomain();
+  // Core module services (no external dependencies)
+  const userService = new UserService();
+  const adminService = new AdminService();
+  const tenantService = new TenantService();
+  const healthService = new HealthService();
   
-  // Billing module domains (depends on core.User)
-  // Note: BillingDomain receives CoreUserDomainDeps interface
-  const billingDomain = new BillingDomain(userDomain);
+  // Billing module services (depends on core.User)
+  // Note: BillingService receives CoreUserServiceDeps interface
+  const billingService = new BillingService(userService);
 
   // =========================================================================
-  // Composition Root: Wire domains
+  // Composition Root: Wire services
   // =========================================================================
   
-  fastify.decorate('domains', {
+  fastify.decorate('services', {
     core: {
-      user: userDomain,
-      admin: adminDomain,
-      tenant: tenantDomain,
-      health: healthDomain,
+      user: userService,
+      admin: adminService,
+      tenant: tenantService,
+      health: healthService,
     },
     billing: {
-      billing: billingDomain,
+      billing: billingService,
     },
   });
 

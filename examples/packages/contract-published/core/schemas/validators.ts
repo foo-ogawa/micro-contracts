@@ -131,8 +131,8 @@ export const HealthStatus = {
   } as const;
 
 // Parameter schemas
-export const UserDomain_getUsersParams = {
-    "$id": "UserDomain_getUsersParams",
+export const User_getUsersParams = {
+    "$id": "User_getUsersParams",
     "type": "object",
     "properties": {
       "limit": {
@@ -147,8 +147,8 @@ export const UserDomain_getUsersParams = {
     }
   } as const;
 
-export const UserDomain_getUserByIdParams = {
-    "$id": "UserDomain_getUserByIdParams",
+export const User_getUserByIdParams = {
+    "$id": "User_getUserByIdParams",
     "type": "object",
     "properties": {
       "id": {
@@ -168,6 +168,6 @@ export const allSchemas = [
   UserListResponse,
   CreateUserRequest,
   HealthStatus,
-  UserDomain_getUsersParams,
-  UserDomain_getUserByIdParams,
+  User_getUsersParams,
+  User_getUserByIdParams,
 ] as const;

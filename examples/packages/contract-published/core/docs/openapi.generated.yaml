@@ -12,7 +12,7 @@ info:
     Example API demonstrating micro-contracts features:
     - Cross-cutting concerns with x-middleware
     - Public/private endpoint separation
-    - Domain-driven code generation
+    - Service-driven code generation
   version: 1.0.0
   contact:
     name: API Support
@@ -33,7 +33,7 @@ paths:
       summary: Get users list
       description: Retrieve a paginated list of all users in the system.
       operationId: getUsers
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: getUsers
       x-micro-contracts-published: true
       x-middleware:
@@ -80,7 +80,7 @@ paths:
       summary: Create new user
       description: Create a new user account with the specified email and name.
       operationId: createUser
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: createUser
       x-micro-contracts-published: true
       x-middleware:
@@ -129,7 +129,7 @@ paths:
       summary: Get user by ID
       description: Retrieve detailed information for a specific user by their unique ID.
       operationId: getUserById
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: getUserById
       x-micro-contracts-published: true
       x-middleware:
@@ -178,7 +178,7 @@ paths:
       summary: Health check
       description: Check the health status of the service. No authentication required.
       operationId: healthCheck
-      x-micro-contracts-domain: HealthDomain
+      x-micro-contracts-service: Health
       x-micro-contracts-method: check
       x-micro-contracts-published: true
       responses:

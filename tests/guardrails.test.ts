@@ -42,9 +42,9 @@ describe('matchGlob', () => {
   });
   
   it('should match path segments', () => {
-    expect(matchGlob('server/src/core/domains/User.ts', 'server/src/**/domains/**/*.ts')).toBe(true);
-    expect(matchGlob('server/src/billing/domains/index.ts', 'server/src/**/domains/**/*.ts')).toBe(true);
-    expect(matchGlob('server/src/core/routes.ts', 'server/src/**/domains/**/*.ts')).toBe(false);
+    expect(matchGlob('server/src/core/services/User.ts', 'server/src/**/services/**/*.ts')).toBe(true);
+    expect(matchGlob('server/src/billing/services/index.ts', 'server/src/**/services/**/*.ts')).toBe(true);
+    expect(matchGlob('server/src/core/routes.ts', 'server/src/**/services/**/*.ts')).toBe(false);
   });
   
   it('should match generated file patterns', () => {
@@ -95,7 +95,7 @@ describe('verifyAllowlist', () => {
   const config = {
     allowed: [
       'spec/**/*.yaml',
-      'server/src/**/domains/**/*.ts',
+      'server/src/**/services/**/*.ts',
       'docs/**/*.md',
     ],
     protected: [

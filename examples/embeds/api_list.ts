@@ -9,7 +9,7 @@ interface OpenAPIOperation {
   summary?: string;
   description?: string;
   operationId?: string;
-  'x-micro-contracts-domain'?: string;
+  'x-micro-contracts-service'?: string;
   'x-micro-contracts-method'?: string;
   'x-micro-contracts-published'?: boolean;
   'x-middleware'?: string[];
@@ -60,11 +60,11 @@ export default defineEmbed({
 
           const middlewares = operation['x-middleware'] || [];
           const isPublished = operation['x-micro-contracts-published'] ? '✅' : '';
-          const domain = operation['x-micro-contracts-domain'] || '';
-          const domainMethod = operation['x-micro-contracts-method'] || '';
+          const service = operation['x-micro-contracts-service'] || '';
+          const serviceMethod = operation['x-micro-contracts-method'] || '';
           
           // Implementation file link
-          const implFile = `server/src/${moduleName}/domains/${domain}.ts`;
+          const implFile = `server/src/${moduleName}/services/${service}Service.ts`;
 
           rows.push([
             moduleName,
@@ -73,7 +73,7 @@ export default defineEmbed({
             operation.summary || '',
             isPublished,
             middlewares.join(', '),
-            ctx.markdown.link(`${domain}.${domainMethod}`, implFile),
+            ctx.markdown.link(`${service}.${serviceMethod}`, implFile),
           ]);
         }
       }

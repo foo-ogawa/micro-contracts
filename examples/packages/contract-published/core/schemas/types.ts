@@ -69,19 +69,19 @@ export interface HealthStatus {
 }
 
 // Operation-specific types
-export interface UserDomain_getUsersParams {
+export interface User_getUsersParams {
   'limit'?: number;
   'offset'?: number;
 }
 
-export type UserDomain_getUsersInput = UserDomain_getUsersParams;
+export type User_getUsersInput = User_getUsersParams;
 
-export type UserDomain_createUserInput = { data: CreateUserRequest };
+export type User_createUserInput = { data: CreateUserRequest };
 
-export interface UserDomain_getUserByIdParams {
+export interface User_getUserByIdParams {
   'id': string;
 }
 
-export type UserDomain_getUserByIdInput = UserDomain_getUserByIdParams;
+export type User_getUserByIdInput = User_getUserByIdParams;
 
-export type HealthDomain_checkInput = Record<string, never>;
+export type Health_checkInput = Record<string, never>;

@@ -81,7 +81,7 @@ OpenAPI spec (spec/{module}/openapi/*.yaml)
     ↓ micro-contracts generate
 Contract packages (packages/contract/{module}/)
     ├── schemas/types.ts       # Request/Response types
-    ├── domains/               # Domain interfaces
+    ├── services/              # Service interfaces
     └── overlays/              # Overlay handler interfaces
     ↓
 Server routes + Frontend clients (generated via templates)
@@ -91,7 +91,7 @@ Server routes + Frontend clients (generated via templates)
 
 | Concept | Definition | Example |
 |---------|------------|---------|
-| **Module** | Logical contract boundary (OpenAPI + Domain) | `core`, `billing`, `users` |
+| **Module** | Logical contract boundary (OpenAPI + Service) | `core`, `billing`, `users` |
 | **Service** | Deployment unit (can contain 1+ modules) | `api-server` |
 
 A monolith may have multiple modules in one service. Start with multiple modules in one service and split later as needed.
@@ -133,14 +133,14 @@ project/
 ├── packages/                          # ❌ Auto-generated (DO NOT EDIT)
 │   ├── contract/{module}/
 │   │   ├── schemas/                   #    Types, validators
-│   │   ├── domains/                   #    Domain interfaces
+│   │   ├── services/                  #    Service interfaces
 │   │   ├── overlays/                  #    Overlay handler interfaces
 │   │   └── deps/                      #    Re-exports from dependencies
 │   └── contract-published/{module}/   #    Public API subset
 │
 ├── server/src/{module}/
 │   ├── routes.generated.ts            # ❌ Auto-generated (template: fastify-routes.hbs)
-│   ├── domains/                       # ✅ Human-edited (domain implementations)
+│   ├── services/                      # ✅ Human-edited (service implementations)
 │   └── overlays/                      # ✅ Human-edited (overlay implementations)
 │
 └── frontend/src/{module}/
@@ -160,7 +160,7 @@ project/
 
 | Extension | Type | Description |
 |-----------|------|-------------|
-| `x-micro-contracts-domain` | string | Domain class name (e.g., `User`, `Order`) |
+| `x-micro-contracts-service` | string | Service class name (e.g., `User`, `Order`) |
 | `x-micro-contracts-method` | string | Method name to call (should match `operationId`) |
 
 ### Optional Extensions
@@ -178,7 +178,7 @@ paths:
   /api/users:
     get:
       operationId: getUsers
-      x-micro-contracts-domain: User
+      x-micro-contracts-service: User
       x-micro-contracts-method: getUsers
       x-micro-contracts-published: true
       x-middleware: [requireAuth]            # Custom extension for overlays
@@ -297,23 +297,23 @@ Options:
 
 ## Generated Code
 
-### Domain Interface
+### Service Interface
 
 ```typescript
-// packages/contract/core/domains/UserDomainApi.ts
-export interface UserDomainApi {
-  getUsers(input: UserDomain_getUsersInput): Promise<UserListResponse>;
-  getUserById(input: UserDomain_getUserByIdInput): Promise<User>;
+// packages/contract/core/services/UserServiceApi.ts
+export interface UserServiceApi {
+  getUsers(input: UserService_getUsersInput): Promise<UserListResponse>;
+  getUserById(input: UserService_getUserByIdInput): Promise<User>;
 }
 ```
 
-### Domain Implementation
+### Service Implementation
 
 ```typescript
-// server/src/core/domains/UserDomain.ts
-import type { UserDomainApi } from '@project/contract/core/domains/UserDomainApi.js';
+// server/src/core/services/UserService.ts
+import type { UserServiceApi } from '@project/contract/core/services/UserServiceApi.js';
 
-export class UserDomain implements UserDomainApi {
+export class UserService implements UserServiceApi {
   async getUsers(input) {
     // Input is HTTP-agnostic: { limit?: number, offset?: number }
     return { users: [...], total: 100 };

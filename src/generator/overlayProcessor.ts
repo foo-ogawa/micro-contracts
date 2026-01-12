@@ -495,7 +495,7 @@ export function generateExtensionInterfaces(
   lines.push('');
   lines.push('/**');
   lines.push(' * Result returned by overlay handlers');
-  lines.push(' * - success: true → continue to next handler/domain');
+  lines.push(' * - success: true → continue to next handler/service');
   lines.push(' * - success: false → return error response');
   lines.push(' */');
   lines.push('export interface OverlayResult<TContext = unknown> {');
@@ -505,7 +505,7 @@ export function generateExtensionInterfaces(
   lines.push('    message: string;');
   lines.push('    code?: string;');
   lines.push('  };');
-  lines.push('  /** Context passed to subsequent handlers and domain */');
+  lines.push('  /** Context passed to subsequent handlers and service */');
   lines.push('  context?: TContext;');
   lines.push('}');
   lines.push('');

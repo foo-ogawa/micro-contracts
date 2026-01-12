@@ -23,7 +23,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
     fastify.addSchema(schema);
   }
 
-  const { {{#each domains}}{{key}}{{#unless @last}}, {{/unless}}{{/each}} } = {{domainsPath}};
+  const { {{#each services}}{{key}}{{#unless @last}}, {{/unless}}{{/each}} } = {{servicesPath}};
 {{#if extensionInfo.length}}
   const handlers = fastify.overlayHandlers;
 {{/if}}
@@ -59,7 +59,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
       data: req.body as types.{{requestBody.schemaName}},
 {{/if}}
     };
-    return {{domainKey}}.{{domainMethod}}(input);
+    return {{serviceKey}}.{{serviceMethod}}(input);
   });
 
 {{/each}}
@@ -72,15 +72,15 @@ export const STARTER_FETCH_CLIENT_TEMPLATE = `/**
  * 
  * DO NOT EDIT MANUALLY
  * 
- * Client API matches Domain API signature (single input object).
+ * Client API matches Service API signature (single input object).
  * Internally maps input to HTTP request (path params, query params, body).
  */
 
 import type {
-{{#each domainTypes}}
+{{#each serviceTypes}}
   {{this}},
 {{/each}}
-} from '{{contractPackage}}/domains';
+} from '{{contractPackage}}/services';
 import type {
 {{#each schemaTypes}}
   {{this}},
@@ -111,19 +111,19 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json();
 }
 
-{{#each domains}}
+{{#each services}}
 // ==========================================================================
 // {{name}} API Client
 // ==========================================================================
-export const {{key}}Api: {{name}}Api = {
+export const {{key}}Api: {{name}}ServiceApi = {
 {{#each ../routes}}
-{{#if (eq domain ../name)}}
+{{#if (eq service ../name)}}
   /**
    * {{httpMethod}} {{path}}
    {{#if summary}}* {{summary}}{{/if}}
    {{#if isPublished}}* @published{{/if}}
    */
-  async {{domainMethod}}(input: {{inputType}}): Promise<{{responseType}}> {
+  async {{serviceMethod}}(input: {{inputType}}): Promise<{{responseType}}> {
 {{#if queryParams.length}}
     const searchParams = new URLSearchParams();
 {{#each queryParams}}
@@ -160,29 +160,29 @@ export const {{key}}Api: {{name}}Api = {
 {{/each}}
 `;
 
-export const STARTER_DOMAIN_STUBS_TEMPLATE = `{{!-- Domain implementation stubs template --}}
-{{!-- Generates skeleton implementations for domain methods --}}
-// Auto-generated domain stubs - Edit to implement business logic
-import type { {{#each domains}}{{this}}DomainApi{{#unless @last}}, {{/unless}}{{/each}} } from '{{config.contractPackage}}/domains';
+export const STARTER_SERVICE_STUBS_TEMPLATE = `{{!-- Service implementation stubs template --}}
+{{!-- Generates skeleton implementations for service methods --}}
+// Auto-generated service stubs - Edit to implement business logic
+import type { {{#each services}}{{this}}ServiceApi{{#unless @last}}, {{/unless}}{{/each}} } from '{{config.contractPackage}}/services';
 import type * as types from '{{config.contractPackage}}/schemas/types';
 
-{{#each domains}}
+{{#each services}}
 /**
- * {{this}} Domain Implementation
+ * {{this}} Service Implementation
  * 
  * Implement the methods below with your business logic.
  * Generated methods receive HTTP-agnostic input objects.
  */
-export class {{this}}Domain implements {{this}}DomainApi {
+export class {{this}}Service implements {{this}}ServiceApi {
 {{#each ../operations}}
-{{#if (eq domain ../this)}}
+{{#if (eq service ../this)}}
   /**
    * {{summary}}
    * {{method}} {{path}}
    */
-  async {{domainMethod}}({{#if inputType}}input: types.{{inputType}}{{/if}}): Promise<types.{{responseType}}> {
-    // TODO: Implement {{domainMethod}}
-    throw new Error('Not implemented: {{domainMethod}}');
+  async {{serviceMethod}}({{#if inputType}}input: types.{{inputType}}{{/if}}): Promise<types.{{responseType}}> {
+    // TODO: Implement {{serviceMethod}}
+    throw new Error('Not implemented: {{serviceMethod}}');
   }
 
 {{/if}}
@@ -353,7 +353,7 @@ export async function {{camelCase name}}(
   //   };
   // }
 
-  return { success: true, context: { /* optional context for domain */ } };
+  return { success: true, context: { /* optional context for service */ } };
 }
 
 {{/each}}
@@ -375,7 +375,7 @@ export function getStarterTemplates(): Record<string, string> {
   return {
     'fastify-routes.hbs': STARTER_FASTIFY_ROUTES_TEMPLATE,
     'fetch-client.hbs': STARTER_FETCH_CLIENT_TEMPLATE,
-    'domain-stubs.hbs': STARTER_DOMAIN_STUBS_TEMPLATE,
+    'service-stubs.hbs': STARTER_SERVICE_STUBS_TEMPLATE,
     'overlay-adapter.hbs': STARTER_OVERLAY_ADAPTER_TEMPLATE,
     'overlay-stubs.hbs': STARTER_OVERLAY_STUBS_TEMPLATE,
   };

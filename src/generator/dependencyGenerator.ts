@@ -132,37 +132,37 @@ interface DepsFileContentOptions {
 function generateDepsFileContent(options: DepsFileContentOptions): string {
   const { sourceModule, targetModule, deps, contractPublicPath } = options;
   
-  // Group deps by domain
-  const depsByDomain = new Map<string, DependencyRef[]>();
+  // Group deps by service
+  const depsByService = new Map<string, DependencyRef[]>();
   for (const dep of deps) {
-    if (!depsByDomain.has(dep.domain)) {
-      depsByDomain.set(dep.domain, []);
+    if (!depsByService.has(dep.service)) {
+      depsByService.set(dep.service, []);
     }
-    depsByDomain.get(dep.domain)!.push(dep);
+    depsByService.get(dep.service)!.push(dep);
   }
   
   // Build type imports and interface
   const typeImports: string[] = [];
   const interfaceLines: string[] = [];
   
-  for (const [domain, domainDeps] of depsByDomain) {
-    // Add common types for this domain (e.g., User, UserListResponse)
+  for (const [service, serviceDeps] of depsByService) {
+    // Add common types for this service (e.g., User, UserListResponse)
     // This is simplified - in production, we'd analyze the OpenAPI spec
     // to determine exactly which types are used
-    typeImports.push(`${domain}_*`);
+    typeImports.push(`${service}_*`);
     
     // Add interface methods
-    for (const dep of domainDeps) {
+    for (const dep of serviceDeps) {
       interfaceLines.push(`  ${dep.method}(...args: unknown[]): Promise<unknown>;`);
     }
   }
   
   const pascalTargetModule = targetModule.charAt(0).toUpperCase() + targetModule.slice(1);
   
-  // Generate domain interface names
-  const domainInterfaces: string[] = [];
-  for (const domain of depsByDomain.keys()) {
-    domainInterfaces.push(`${pascalTargetModule}${domain}Deps`);
+  // Generate service interface names
+  const serviceInterfaces: string[] = [];
+  for (const service of depsByService.keys()) {
+    serviceInterfaces.push(`${pascalTargetModule}${service}Deps`);
   }
   
   return `/**
@@ -175,14 +175,14 @@ function generateDepsFileContent(options: DepsFileContentOptions): string {
 // Re-exported types from ${targetModule} (contract-published)
 export type * from '${contractPublicPath}/schemas';
 
-${Array.from(depsByDomain.entries()).map(([domain, domainDeps]) => {
-  const interfaceName = `${pascalTargetModule}${domain}Deps`;
+${Array.from(depsByService.entries()).map(([service, serviceDeps]) => {
+  const interfaceName = `${pascalTargetModule}${service}Deps`;
   return `/**
- * ${domain} domain interface (subset)
+ * ${service} service interface (subset)
  * Only methods declared in x-micro-contracts-depend-on are exposed
  */
 export interface ${interfaceName} {
-${domainDeps.map(dep => `  ${dep.method}(...args: unknown[]): Promise<unknown>;`).join('\n')}
+${serviceDeps.map(dep => `  ${dep.method}(...args: unknown[]): Promise<unknown>;`).join('\n')}
 }`;
 }).join('\n\n')}
 `;

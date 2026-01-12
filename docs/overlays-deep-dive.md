@@ -43,7 +43,7 @@ paths:
   /api/tenant/data:
     get:
       operationId: getTenantData
-      x-micro-contracts-domain: Tenant
+      x-micro-contracts-service: Tenant
       x-micro-contracts-method: getTenantData
       x-middleware:                        # ← Extension marker
         - tenantIsolation

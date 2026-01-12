@@ -13,15 +13,15 @@ import type {
 import { isReference, getRefName } from '../types.js';
 
 /**
- * Get a valid TypeScript identifier from domain and method
- * e.g., "DashboardDomain" + "getSchema" -> "DashboardDomain_getSchema"
+ * Get a valid TypeScript identifier from service and method
+ * e.g., "User" + "getSchema" -> "User_getSchema"
  */
 function getOperationTypeBase(operation: OperationObject): string {
-  const domain = operation['x-micro-contracts-domain'] as string | undefined;
+  const service = operation['x-micro-contracts-service'] as string | undefined;
   const method = operation['x-micro-contracts-method'] as string | undefined;
   
-  if (domain && method) {
-    return `${domain}_${method}`;
+  if (service && method) {
+    return `${service}_${method}`;
   }
   
   if (operation.operationId) {

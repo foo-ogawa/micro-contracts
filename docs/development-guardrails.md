@@ -99,7 +99,7 @@ Files are categorized into three groups:
 
 | Category | Examples | Who can edit |
 |----------|----------|--------------|
-| `allowed` | `spec/**/*.yaml`, `server/src/**/domains/**` | Anyone (AI or human) |
+| `allowed` | `spec/**/*.yaml`, `server/src/**/services/**` | Anyone (AI or human) |
 | `protected` | `.github/**`, `spec/spectral.yaml`, `server/src/_shared/overlays/**` | Requires CODEOWNERS approval |
 | `generated` | `packages/**`, `*.generated.*` | Only via `generate` command |
 
@@ -119,7 +119,7 @@ Validates OpenAPI specs before generation.
 
 **Spec lint** — Validates via Spectral ruleset:
 - OpenAPI 3.x structure (required fields, JSON Schema, `$ref` resolution)
-- micro-contracts extensions (`x-micro-contracts-domain`, `x-micro-contracts-method`)
+- micro-contracts extensions (`x-micro-contracts-service`, `x-micro-contracts-method`)
 - Security extensions (`x-auth`, `x-authz`) if required
 
 **Breaking changes** — Detects backward-incompatible changes:
@@ -214,8 +214,8 @@ allowed:
   - spec/**/openapi/*.yaml
   - spec/**/templates/*.hbs
   
-  # Domain implementations (human-written)
-  - server/src/**/domains/**/*.ts
+  # Service implementations (human-written)
+  - server/src/**/services/**/*.ts
   - server/src/**/container.ts
   - server/src/server.ts
   
@@ -442,7 +442,7 @@ npx --yes -p micro-contracts@${MICRO_CONTRACTS_VERSION} micro-contracts check
 | Scenario | Gate | Result |
 |----------|------|--------|
 | Edit `spec/**/*.yaml` → regenerate → commit | — | ✅ Allowed |
-| Edit `server/src/**/domains/**` | — | ✅ Allowed |
+| Edit `server/src/**/services/**` | — | ✅ Allowed |
 | Edit `packages/**/*.ts` directly | 1 | ❌ Blocked |
 | Edit `*.generated.ts` directly | 1 | ❌ Blocked |
 | Edit spec but forget to regenerate | 3 | ❌ Fails drift |

@@ -30,7 +30,7 @@ paths:
       operationId: getInvoices
       summary: List all invoices
       description: Retrieve a list of all invoices, optionally filtered by user or status.
-      x-micro-contracts-domain: Billing
+      x-micro-contracts-service: Billing
       x-micro-contracts-method: getInvoices
       x-micro-contracts-published: true
       x-middleware:
@@ -95,7 +95,7 @@ paths:
       operationId: createInvoice
       summary: Create a new invoice
       description: Create a new invoice for a user with the specified amount and currency.
-      x-micro-contracts-domain: Billing
+      x-micro-contracts-service: Billing
       x-micro-contracts-method: createInvoice
       x-micro-contracts-published: true
       x-middleware:
@@ -154,7 +154,7 @@ paths:
       operationId: getInvoiceById
       summary: Get invoice by ID
       description: Retrieve detailed information for a specific invoice by its unique ID.
-      x-micro-contracts-domain: Billing
+      x-micro-contracts-service: Billing
       x-micro-contracts-method: getInvoiceById
       x-micro-contracts-published: true
       x-middleware:
@@ -212,7 +212,7 @@ paths:
       operationId: payInvoice
       summary: Pay an invoice
       description: Process payment for an invoice using the specified payment method.
-      x-micro-contracts-domain: Billing
+      x-micro-contracts-service: Billing
       x-micro-contracts-method: payInvoice
       x-micro-contracts-published: true
       x-middleware:

@@ -148,7 +148,7 @@ program
   .description('Initialize a new module structure with starter templates')
   .argument('<name>', 'Module name (e.g., core, users)')
   .option('-d, --dir <path>', 'Base directory', 'src')
-  .option('-i, --openapi <path>', 'OpenAPI spec to process (auto-adds x-micro-contracts-domain/method)')
+  .option('-i, --openapi <path>', 'OpenAPI spec to process (auto-adds x-micro-contracts-service/method)')
   .option('-o, --output <path>', 'Output path for processed OpenAPI')
   .option('--skip-templates', 'Skip creating starter templates')
   .action(async (name, options) => {
@@ -200,7 +200,7 @@ program
     const baseDir = path.resolve(options.dir, name);
     const dirs = [
       baseDir,
-      path.join(baseDir, 'domains'),
+      path.join(baseDir, 'services'),
       path.join(baseDir, 'models'),
     ];
     
@@ -215,7 +215,7 @@ program
     const files: [string, string][] = [
       [path.join(baseDir, 'db.ts'), generateDbTemplate()],
       [path.join(baseDir, 'container.ts'), generateContainerTemplate(name)],
-      [path.join(baseDir, 'domains', 'index.ts'), '// Export domain classes\n'],
+      [path.join(baseDir, 'services', 'index.ts'), '// Export service classes\n'],
       [path.join(baseDir, 'models', 'index.ts'), '// Export models\n'],
     ];
     
@@ -252,10 +252,10 @@ program
       const processed = processOpenAPIWithExtensions(openapiPath);
       fs.writeFileSync(outputPath, processed.yaml);
       console.log(`Created: ${outputPath}`);
-      console.log(`  - Added x-micro-contracts-domain to ${processed.stats.domainsAdded} operations`);
+      console.log(`  - Added x-micro-contracts-service to ${processed.stats.servicesAdded} operations`);
       console.log(`  - Added x-micro-contracts-method to ${processed.stats.methodsAdded} operations`);
-      if (processed.stats.domains.length > 0) {
-        console.log(`  - Detected domains: ${processed.stats.domains.join(', ')}`);
+      if (processed.stats.services.length > 0) {
+        console.log(`  - Detected services: ${processed.stats.services.join(', ')}`);
       }
     }
     
@@ -264,7 +264,7 @@ program
     if (!options.openapi) {
       console.log(`\nNext steps:`);
       console.log(`  1. Create spec/${name}/openapi/${name}.yaml with your API spec`);
-      console.log(`  2. Add x-micro-contracts-domain and x-micro-contracts-method to operations`);
+      console.log(`  2. Add x-micro-contracts-service and x-micro-contracts-method to operations`);
       console.log(`  3. Run: npx micro-contracts generate`);
       console.log(`\nTip: Use --openapi to auto-add extensions:`);
       console.log(`  npx micro-contracts init ${name} --openapi path/to/spec.yaml`);
@@ -609,29 +609,29 @@ function generateContainerTemplate(moduleName: string): string {
 
 import { testConnection, closeDb } from './db.js';
 
-// Import domain implementations
-// import { ExampleDomain } from './domains/ExampleDomain.js';
+// Import service implementations
+// import { ExampleService } from './services/ExampleService.js';
 
-// Import domain interfaces from contract
-// import type { ExampleDomainApi } from '@project/contract/${moduleName}/domains';
+// Import service interfaces from contract
+// import type { ExampleServiceApi } from '@project/contract/${moduleName}/services';
 
-export interface ${pascalName}Domains {
-  // example: ExampleDomainApi;
+export interface ${pascalName}Services {
+  // example: ExampleServiceApi;
 }
 
 export interface ${pascalName}ModuleContainer {
-  domains: ${pascalName}Domains;
+  services: ${pascalName}Services;
   testConnection: () => Promise<boolean>;
   close: () => Promise<void>;
 }
 
 export async function initialize${pascalName}Module(): Promise<${pascalName}ModuleContainer> {
-  const domains: ${pascalName}Domains = {
-    // example: new ExampleDomain(),
+  const services: ${pascalName}Services = {
+    // example: new ExampleService(),
   };
 
   return {
-    domains,
+    services,
     testConnection,
     close: closeDb,
   };
@@ -640,23 +640,23 @@ export async function initialize${pascalName}Module(): Promise<${pascalName}Modu
 }
 
 /**
- * Process OpenAPI file and auto-add x-micro-contracts-domain/method extensions
+ * Process OpenAPI file and auto-add x-micro-contracts-service/method extensions
  */
 function processOpenAPIWithExtensions(openapiPath: string): {
   yaml: string;
   stats: {
-    domainsAdded: number;
+    servicesAdded: number;
     methodsAdded: number;
-    domains: string[];
+    services: string[];
   };
 } {
   const content = fs.readFileSync(openapiPath, 'utf-8');
   const spec = yaml.parse(content);
   
   const stats = {
-    domainsAdded: 0,
+    servicesAdded: 0,
     methodsAdded: 0,
-    domains: new Set<string>(),
+    services: new Set<string>(),
   };
   
   const httpMethods = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'];
@@ -665,8 +665,8 @@ function processOpenAPIWithExtensions(openapiPath: string): {
     for (const [pathKey, pathItem] of Object.entries(spec.paths)) {
       if (!pathItem || typeof pathItem !== 'object') continue;
       
-      // Infer domain from path: /api/users/{id} → User
-      const domain = inferDomainFromPath(pathKey);
+      // Infer service from path: /api/users/{id} → User
+      const service = inferServiceFromPath(pathKey);
       
       for (const method of httpMethods) {
         const operation = (pathItem as Record<string, unknown>)[method];
@@ -674,15 +674,15 @@ function processOpenAPIWithExtensions(openapiPath: string): {
         
         const op = operation as Record<string, unknown>;
         
-        // Add x-micro-contracts-domain if not present (check both forms)
-        if (!op['x-micro-contracts-domain'] && !op['x-domain'] && domain) {
-          op['x-micro-contracts-domain'] = domain;
-          stats.domainsAdded++;
-          stats.domains.add(domain);
+        // Add x-micro-contracts-service if not present
+        if (!op['x-micro-contracts-service'] && service) {
+          op['x-micro-contracts-service'] = service;
+          stats.servicesAdded++;
+          stats.services.add(service);
         }
         
-        // Add x-micro-contracts-method if not present (check both forms)
-        if (!op['x-micro-contracts-method'] && !op['x-method']) {
+        // Add x-micro-contracts-method if not present
+        if (!op['x-micro-contracts-method']) {
           // Use operationId if available, otherwise generate
           const methodName = op.operationId 
             ? String(op.operationId)
@@ -702,21 +702,21 @@ function processOpenAPIWithExtensions(openapiPath: string): {
   return {
     yaml: output,
     stats: {
-      domainsAdded: stats.domainsAdded,
+      servicesAdded: stats.servicesAdded,
       methodsAdded: stats.methodsAdded,
-      domains: Array.from(stats.domains),
+      services: Array.from(stats.services),
     },
   };
 }
 
 /**
- * Infer domain name from API path
+ * Infer service name from API path
  * /api/users → User
  * /api/users/{id} → User
  * /api/user-profiles → UserProfile
  * /api/v1/accounts → Account
  */
-function inferDomainFromPath(pathKey: string): string | null {
+function inferServiceFromPath(pathKey: string): string | null {
   // Remove /api prefix and version prefix
   const normalized = pathKey
     .replace(/^\/api\//, '/')
@@ -829,7 +829,7 @@ function generateConfigTemplate(moduleName: string): string {
     '      output: server/src/{module}/routes.generated.ts',
     '      template: fastify-routes.hbs',
     '      config:',
-    '        domainsPath: fastify.domains.{module}',
+    '        servicesPath: fastify.services.{module}',
     '',
     '    frontend-api:',
     '      output: frontend/src/{module}/api.generated.ts',
@@ -954,13 +954,13 @@ function generateSpectralRules(): string {
 extends: ["spectral:oas"]
 
 rules:
-  # Require x-micro-contracts-domain on all operations
-  operation-domain:
-    description: "Operations must have x-micro-contracts-domain"
+  # Require x-micro-contracts-service on all operations
+  operation-service:
+    description: "Operations must have x-micro-contracts-service"
     severity: error
     given: "$.paths[*][get,post,put,patch,delete]"
     then:
-      field: x-micro-contracts-domain
+      field: x-micro-contracts-service
       function: truthy
 
   # Require x-micro-contracts-method on all operations  
@@ -992,9 +992,9 @@ rules:
     severity: warn
     given: "$.paths[*][get,post,put,patch,delete]"
     then:
-      - field: x-domain
+      - field: x-service
         function: falsy
-        description: "Use x-micro-contracts-domain instead of x-domain"
+        description: "Use x-micro-contracts-service instead of x-service"
       - field: x-method
         function: falsy
         description: "Use x-micro-contracts-method instead of x-method"

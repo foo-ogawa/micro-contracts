@@ -92,7 +92,7 @@ paths:
   /api/users:
     get:
       operationId: getUsers
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: getUsers
       responses:
         '200':
@@ -133,7 +133,7 @@ components:
       expect(fs.existsSync(path.join(contractDir, 'index.ts'))).toBe(true);
       expect(fs.existsSync(path.join(contractDir, 'schemas', 'types.ts'))).toBe(true);
       expect(fs.existsSync(path.join(contractDir, 'schemas', 'validators.ts'))).toBe(true);
-      expect(fs.existsSync(path.join(contractDir, 'domains', 'index.ts'))).toBe(true);
+      expect(fs.existsSync(path.join(contractDir, 'services', 'index.ts'))).toBe(true);
     });
 
     it('should generate server routes', async () => {
@@ -148,7 +148,7 @@ paths:
   /api/users:
     get:
       operationId: getUsers
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: getUsers
       responses:
         '200':
@@ -163,10 +163,10 @@ components:
 // Auto-generated routes
 import type { FastifyInstance } from 'fastify';
 
-export async function registerRoutes(fastify: FastifyInstance, domains: any) {
+export async function registerRoutes(fastify: FastifyInstance, services: any) {
 {{#each routes}}
   fastify.{{lowercase method}}('{{path}}', async (request, reply) => {
-    return domains.{{domainKey}}.{{handler}}(request.body);
+    return services.{{serviceKey}}.{{handler}}(request.body);
   });
 {{/each}}
 }
@@ -218,7 +218,7 @@ paths:
   /api/users:
     get:
       operationId: getUsers
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: getUsers
       responses:
         '200':
@@ -239,8 +239,8 @@ components:
 // Auto-generated API client
 const BASE_URL = '';
 
-{{#each domains}}
-export const {{camelCase name}}DomainApi = {
+{{#each services}}
+export const {{camelCase name}}ServiceApi = {
 {{#each operations}}
   async {{name}}(): Promise<any> {
     const response = await fetch(BASE_URL + '{{../path}}');
@@ -250,7 +250,7 @@ export const {{camelCase name}}DomainApi = {
 };
 {{/each}}
 
-export function getUsers() { return userDomainApi.getUsers(); }
+export function getUsers() { return userServiceApi.getUsers(); }
 `);
 
       // Create config
@@ -261,7 +261,7 @@ export function getUsers() { return userDomainApi.getUsers(); }
           frontend: {
             output: path.join(tmpDir, 'frontend/src/{module}'),
             client: 'api.generated.ts',
-            domain: 'domain.generated.ts',
+            service: 'service.generated.ts',
           },
           templates: {
             frontend: templatePath,
@@ -283,8 +283,8 @@ export function getUsers() { return userDomainApi.getUsers(); }
       
       const clientContent = fs.readFileSync(clientPath, 'utf-8');
       expect(clientContent).toContain('getUsers');
-      // Check for domain API export
-      expect(clientContent).toContain('userDomainApi');
+      // Check for service API export
+      expect(clientContent).toContain('userServiceApi');
     });
 
     it('should apply overlays and generate extension interfaces', async () => {
@@ -299,7 +299,7 @@ paths:
   /api/users:
     get:
       operationId: getUsers
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: getUsers
       x-middleware:
         - requireAuth
@@ -371,7 +371,7 @@ paths:
   /api/core:
     get:
       operationId: getCoreData
-      x-micro-contracts-domain: CoreDomain
+      x-micro-contracts-service: Core
       x-micro-contracts-method: getData
       responses:
         '200':
@@ -390,7 +390,7 @@ paths:
   /api/users:
     get:
       operationId: getUsers
-      x-micro-contracts-domain: UserDomain
+      x-micro-contracts-service: User
       x-micro-contracts-method: getUsers
       responses:
         '200':

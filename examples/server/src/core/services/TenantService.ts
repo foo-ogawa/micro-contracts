@@ -1,12 +1,12 @@
 /**
- * TenantDomain implementation
+ * TenantService implementation
  * Business logic separated from framework concerns
  */
 
-import type { TenantDomainApi } from '@project/contract/core/domains/TenantDomainApi.js';
+import type { TenantServiceApi } from '@project/contract/core/services/TenantServiceApi.js';
 import type * as types from '@project/contract/core/schemas/types.js';
 
-export class TenantDomain implements TenantDomainApi {
+export class TenantService implements TenantServiceApi {
   async getData(): Promise<types.TenantData> {
     return {
       id: '1',
@@ -16,7 +16,7 @@ export class TenantDomain implements TenantDomainApi {
     };
   }
 
-  async createData(input: types.TenantDomain_createDataInput): Promise<types.TenantData> {
+  async createData(input: types.Tenant_createDataInput): Promise<types.TenantData> {
     // Request body is in 'data' property
     const { data } = input;
     return {

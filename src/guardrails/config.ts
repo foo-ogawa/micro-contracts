@@ -17,7 +17,7 @@ export const DEFAULT_GUARDRAILS: GuardrailsConfig = {
     'spec/**/*.yaml',
     'spec/**/*.yml',
     'spec/**/*.hbs',
-    'server/src/**/domains/**/*.ts',
+    'server/src/**/services/**/*.ts',
     'server/src/**/container.ts',
     'server/src/server.ts',
     'docs/**/*.md',
@@ -140,8 +140,8 @@ allowed:
   - spec/**/openapi/*.yaml
   - spec/**/templates/*.hbs
   
-  # Domain implementations (human-written)
-  - server/src/**/domains/**/*.ts
+  # Service implementations (human-written)
+  - server/src/**/services/**/*.ts
   - server/src/**/container.ts
   - server/src/server.ts
   

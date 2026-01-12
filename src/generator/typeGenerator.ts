@@ -283,16 +283,16 @@ function primitiveToTsType(schema: SchemaObject): string {
 }
 
 /**
- * Generate a valid TypeScript identifier from domain and method
- * e.g., "DashboardDomain" + "getSchema" -> "DashboardDomain_getSchema"
+ * Generate a valid TypeScript identifier from service and method
+ * e.g., "User" + "getSchema" -> "User_getSchema"
  */
 function getOperationTypeName(operation: OperationObject): string {
-  const domain = operation['x-micro-contracts-domain'] as string | undefined;
+  const service = operation['x-micro-contracts-service'] as string | undefined;
   const method = operation['x-micro-contracts-method'] as string | undefined;
   
-  if (domain && method) {
-    // Use x-micro-contracts-domain + _ + x-micro-contracts-method for type name
-    return `${domain}_${method}`;
+  if (service && method) {
+    // Use x-micro-contracts-service + _ + x-micro-contracts-method for type name
+    return `${service}_${method}`;
   }
   
   // Fallback: sanitize operationId (replace dots with underscores, etc.)

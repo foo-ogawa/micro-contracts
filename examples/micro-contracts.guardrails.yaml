@@ -10,8 +10,8 @@ allowed:
   - spec/**/openapi/*.yaml
   - spec/**/templates/*.hbs
   
-  # Domain implementations (human-written)
-  - server/src/**/domains/**/*.ts
+  # Service implementations (human-written)
+  - server/src/**/services/**/*.ts
   - server/src/**/container.ts
   - server/src/server.ts
   

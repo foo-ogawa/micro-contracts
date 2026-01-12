@@ -17,7 +17,7 @@ import {
 } from '../types.js';
 import { generateTypes } from './typeGenerator.js';
 import { generateSchemas } from './schemaGenerator.js';
-import { generateDomainInterfaces } from './domainGenerator.js';
+import { generateServiceInterfaces } from './serviceGenerator.js';
 import { lintSpec, formatLintResults } from './linter.js';
 import { 
   processOverlays, 
@@ -41,7 +41,7 @@ import { extractDependencies, expandPlaceholders } from '../types.js';
 
 export { generateTypes } from './typeGenerator.js';
 export { generateSchemas } from './schemaGenerator.js';
-export { generateDomainInterfaces } from './domainGenerator.js';
+export { generateServiceInterfaces } from './serviceGenerator.js';
 export { lintSpec, formatLintResults } from './linter.js';
 export { processOverlays, generateExtensionInterfaces } from './overlayProcessor.js';
 export { buildTemplateContext, generateWithTemplate } from './templateProcessor.js';
@@ -335,7 +335,7 @@ async function generateContractPackage(
   // Create directories
   const dirs = [
     outputDir,
-    path.join(outputDir, 'domains'),
+    path.join(outputDir, 'services'),
     path.join(outputDir, 'schemas'),
     path.join(outputDir, 'errors'),
     path.join(outputDir, 'docs'),
@@ -346,14 +346,14 @@ async function generateContractPackage(
   }
   
   // Note: We no longer delete files before generating to enable change detection.
-  // Orphaned files from removed domains/schemas should be manually cleaned up.
+  // Orphaned files from removed services/schemas should be manually cleaned up.
   
-  // Generate domain interfaces
-  console.log(`  Generating domain interfaces...`);
-  const domainInterfaces = generateDomainInterfaces(targetSpec, { publicOnly });
-  for (const [name, content] of domainInterfaces) {
-    const fileName = name === 'index' ? 'index.ts' : `${name}Api.ts`;
-    const filePath = path.join(outputDir, 'domains', fileName);
+  // Generate service interfaces
+  console.log(`  Generating service interfaces...`);
+  const serviceInterfaces = generateServiceInterfaces(targetSpec, { publicOnly });
+  for (const [name, content] of serviceInterfaces) {
+    const fileName = name === 'index' ? 'index.ts' : `${name}ServiceApi.ts`;
+    const filePath = path.join(outputDir, 'services', fileName);
     writeAndLog(filePath, content);
   }
   
@@ -404,7 +404,7 @@ export { allSchemas } from './validators.js';
  * Auto-generated - DO NOT EDIT
  */
 
-export * from './domains/index.js';
+export * from './services/index.js';
 export * from './schemas/index.js';
 export * from './errors/index.js';
 ${hasOverlays ? "export * from './overlays/index.js';" : ''}
@@ -483,7 +483,7 @@ async function generateFromOutputs(
         (val?.replace(/{module}/g, config.name) ?? fallback);
       
       const templateContext = buildTemplateContext(spec, config.name, {
-        domainsPath: expandPlaceholder(output.config?.domainsPath as string | undefined, `fastify.domains.${config.name}`),
+        servicesPath: expandPlaceholder(output.config?.servicesPath as string | undefined, `fastify.services.${config.name}`),
         contractPackage: expandPlaceholder(output.config?.contractPackage as string | undefined, `@project/contract/${config.name}`),
         extensionInfo: overlayResult?.extensionInfo,
         appliedOverlays: overlayResult?.appliedOverlays,
@@ -582,14 +582,14 @@ function generateSimpleDepsFiles(
   const files: Array<{ path: string; content: string }> = [];
   
   // Group deps by target module
-  const depsByModule = new Map<string, Array<{ domain: string; method: string; raw: string }>>();
+  const depsByModule = new Map<string, Array<{ service: string; method: string; raw: string }>>();
   
   for (const dep of dependencies.allDeps) {
     if (!depsByModule.has(dep.module)) {
       depsByModule.set(dep.module, []);
     }
     depsByModule.get(dep.module)!.push({
-      domain: dep.domain,
+      service: dep.service,
       method: dep.method,
       raw: dep.raw,
     });
@@ -611,7 +611,7 @@ function generateSimpleDepsFiles(
 
 // Re-exported types from ${targetModule} (contract-published)
 export type * from '${relativePathPrefix}/schemas/types.js';
-export type * from '${relativePathPrefix}/domains/index.js';
+export type * from '${relativePathPrefix}/services/index.js';
 `;
     
     files.push({
@@ -660,7 +660,7 @@ async function generateServerRoutes(
   }
   
   const templateContext = buildTemplateContext(spec, config.name, {
-    domainsPath: config.server.domainsPath,
+    servicesPath: config.server.servicesPath,
     contractPackage: `@project/contract/${config.name}`,
     extensionInfo: overlayResult?.extensionInfo,
     appliedOverlays: overlayResult?.appliedOverlays,
@@ -710,22 +710,21 @@ async function generateFrontendClient(
   const clientPath = path.join(outputDir, clientFile);
   writeAndLog(clientPath, clientContent, '  ');
   
-  // Generate domain re-exports
-  const domainContent = generateDomainReExports(config.name);
-  const domainPath = path.join(outputDir, config.frontend.domain);
-  writeAndLog(domainPath, domainContent, '  ');
+  // Generate service re-exports
+  const serviceContent = generateServiceReExports(config.name);
+  const servicePath = path.join(outputDir, config.frontend.service);
+  writeAndLog(servicePath, serviceContent, '  ');
 }
 
 /**
- * Generate domain re-exports file
+ * Generate service re-exports file
  */
-function generateDomainReExports(moduleName: string): string {
+function generateServiceReExports(moduleName: string): string {
   const lines: string[] = [];
   
   lines.push('/**');
-  lines.push(' * Domain re-exports');
+  lines.push(' * Service re-exports');
   lines.push(' * Auto-generated - DO NOT EDIT');
-  lines.push(' */');
   lines.push('');
   
   // Re-export API clients from api.generated
@@ -736,7 +735,7 @@ function generateDomainReExports(moduleName: string): string {
   // Re-export types from contract package
   lines.push('// Contract types');
   lines.push(`export * from '@project/contract/${moduleName}/schemas';`);
-  lines.push(`export * from '@project/contract/${moduleName}/domains';`);
+  lines.push(`export * from '@project/contract/${moduleName}/services';`);
   lines.push(`export * from '@project/contract/${moduleName}/errors';`);
   lines.push('');
   
