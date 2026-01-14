@@ -265,7 +265,9 @@ export function formatCheckResults(
           lines.push(`      ${result.message}`);
         }
         
-        if (verbose && result.details) {
+        // Show details inline only for non-failed checks in verbose mode
+        // Failed check details are shown after the summary
+        if (verbose && result.details && result.status !== 'fail') {
           for (const detail of result.details) {
             lines.push(`      ${detail}`);
           }
@@ -287,7 +289,9 @@ export function formatCheckResults(
         lines.push(`    ${result.message}`);
       }
       
-      if (verbose && result.details) {
+      // Show details inline only for non-failed checks in verbose mode
+      // Failed check details are shown after the summary
+      if (verbose && result.details && result.status !== 'fail') {
         for (const detail of result.details) {
           lines.push(`    ${detail}`);
         }
@@ -312,6 +316,28 @@ export function formatCheckResults(
     lines.push('✅ All checks passed!');
   }
   lines.push('');
+  
+  // Show details for failed checks (always shown, not just in verbose mode)
+  const failedWithDetails = summary.results.filter(
+    r => r.status === 'fail' && r.details && r.details.length > 0
+  );
+  
+  if (failedWithDetails.length > 0) {
+    lines.push('');
+    lines.push('━'.repeat(50));
+    lines.push('📋 Failed Check Details');
+    lines.push('━'.repeat(50));
+    
+    for (const result of failedWithDetails) {
+      lines.push('');
+      lines.push(`▶ ${result.name}`);
+      lines.push('─'.repeat(40));
+      for (const detail of result.details!) {
+        lines.push(`  ${detail}`);
+      }
+    }
+    lines.push('');
+  }
   
   return lines.join('\n');
 }
