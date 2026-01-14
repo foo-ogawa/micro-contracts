@@ -87,18 +87,13 @@ export {
   runDocsCheck,
 } from './docs.js';
 
-// Security
-export {
-  getImplementedOverlays,
-  checkSecurityConsistency,
-  findOverlayDirs,
-  runSecurityCheck,
-} from './security.js';
-
 // Check runner
 export {
   runAllChecks,
   formatCheckResults,
+  formatSingleCheckResult,
+  formatCheckStart,
+  formatCheckSummary,
   getAvailableChecks,
   GATE_DESCRIPTIONS,
 } from './runner.js';

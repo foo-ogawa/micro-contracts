@@ -12,7 +12,6 @@ import { runManifestCheck } from './manifest.js';
 import { runLintCheck, runCustomCommandCheck } from './lint.js';
 import { runTypecheckCheck } from './typecheck.js';
 import { runDocsCheck } from './docs.js';
-import { runSecurityCheck } from './security.js';
 import { loadGuardrailsConfigWithPath } from './config.js';
 
 /**
@@ -47,12 +46,6 @@ const builtinChecks: CheckDefinition[] = [
     description: 'Verify generated artifact integrity',
     gate: 3,
     run: runManifestCheck,
-  },
-  {
-    name: 'security',
-    description: 'Verify security declarations match implementations',
-    gate: 5,
-    run: runSecurityCheck,
   },
 ];
 
@@ -111,6 +104,17 @@ function getAllChecks(options: CheckOptions): CheckDefinition[] {
   // Add custom checks
   allChecks.push(...customChecks);
 
+  // Sort by gate number (G1 → G2 → G3 → G4 → G5, then undefined)
+  allChecks.sort((a, b) => {
+    const gateA = a.gate ?? 999;
+    const gateB = b.gate ?? 999;
+    if (gateA !== gateB) {
+      return gateA - gateB;
+    }
+    // Same gate: preserve original order by name
+    return a.name.localeCompare(b.name);
+  });
+
   return allChecks;
 }
 
@@ -162,7 +166,7 @@ export async function runAllChecks(options: CheckOptions = {}): Promise<CheckSum
   const checksToRun = filterChecks(allChecks, options);
   const skippedChecks = allChecks.filter(c => !checksToRun.includes(c));
   
-  // Add skipped results
+  // Add skipped results (by filter, not reported in streaming)
   for (const check of skippedChecks) {
     results.push({
       name: check.name,
@@ -174,16 +178,28 @@ export async function runAllChecks(options: CheckOptions = {}): Promise<CheckSum
   
   // Run enabled checks
   for (const check of checksToRun) {
+    // Notify check is starting
+    if (options.onCheckStart) {
+      options.onCheckStart(check);
+    }
+    
+    let result: CheckResult;
     try {
-      const result = await check.run(options);
-      results.push(result);
+      result = await check.run(options);
     } catch (error) {
-      results.push({
+      result = {
         name: check.name,
         status: 'fail',
         duration: 0,
         message: error instanceof Error ? error.message : String(error),
-      });
+      };
+    }
+    
+    results.push(result);
+    
+    // Notify check completed
+    if (options.onCheckComplete) {
+      options.onCheckComplete(result, check);
     }
   }
   
@@ -199,6 +215,87 @@ export async function runAllChecks(options: CheckOptions = {}): Promise<CheckSum
     results,
     checks: allChecks,
   };
+}
+
+/**
+ * Format a single check result for streaming output
+ */
+export function formatSingleCheckResult(
+  result: CheckResult,
+  check: CheckDefinition,
+  verbose: boolean = false
+): string {
+  const icon = result.status === 'pass' ? '✓' : result.status === 'fail' ? '✗' : '○';
+  const status = result.status.toUpperCase().padEnd(4);
+  const gateStr = check.gate !== undefined ? `[G${check.gate}] ` : '';
+  
+  let output = `  ${icon} ${gateStr}${result.name.padEnd(20)} ${status} (${result.duration}ms)`;
+  
+  if (result.message && (verbose || result.status !== 'pass')) {
+    output += `\n    ${result.message}`;
+  }
+  
+  return output;
+}
+
+/**
+ * Format check start message for streaming output
+ */
+export function formatCheckStart(check: CheckDefinition): string {
+  const gateStr = check.gate !== undefined ? `[G${check.gate}] ` : '';
+  return `  ⋯ ${gateStr}${check.name.padEnd(20)} running...`;
+}
+
+/**
+ * Format summary only (for use after streaming individual results)
+ */
+export function formatCheckSummary(
+  summary: CheckSummary,
+  checksWithGates?: CheckDefinition[]
+): string {
+  const lines: string[] = [];
+  
+  // Summary
+  lines.push('');
+  lines.push('─'.repeat(50));
+  lines.push('');
+  lines.push(`  Passed:  ${summary.passed}`);
+  lines.push(`  Failed:  ${summary.failed}`);
+  if (summary.skipped > 0) {
+    lines.push(`  Skipped: ${summary.skipped}`);
+  }
+  lines.push('');
+  
+  if (summary.failed > 0) {
+    lines.push('❌ Some checks failed. Fix issues before committing.');
+  } else {
+    lines.push('✅ All checks passed!');
+  }
+  lines.push('');
+  
+  // Show details for failed checks
+  const failedWithDetails = summary.results.filter(
+    r => r.status === 'fail' && r.details && r.details.length > 0
+  );
+  
+  if (failedWithDetails.length > 0) {
+    lines.push('');
+    lines.push('━'.repeat(50));
+    lines.push('📋 Failed Check Details');
+    lines.push('━'.repeat(50));
+    
+    for (const result of failedWithDetails) {
+      lines.push('');
+      lines.push(`▶ ${result.name}`);
+      lines.push('─'.repeat(40));
+      for (const detail of result.details!) {
+        lines.push(`  ${detail}`);
+      }
+    }
+    lines.push('');
+  }
+  
+  return lines.join('\n');
 }
 
 /**

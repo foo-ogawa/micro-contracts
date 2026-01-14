@@ -81,7 +81,7 @@ generated:
 # Gate 5: Doc Consistency & Static Analysis
 #   - docs-sync: Markdown Sync (embedoc)
 #   - docs-links: Links Valid
-#   - security (built-in): CodeQL static analysis
+#   Note: CodeQL runs as a separate CI job (see .github/workflows/)
 #
 # Placeholders:
 #   {files} - space-separated list of target files (auto-detected)

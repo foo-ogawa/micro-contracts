@@ -17,6 +17,9 @@ import { getStarterTemplates } from './cli/templates.js';
 import {
   runAllChecks,
   formatCheckResults,
+  formatSingleCheckResult,
+  formatCheckStart,
+  formatCheckSummary,
   getAvailableChecks,
   createGuardrailsConfig,
   generateManifest,
@@ -24,7 +27,7 @@ import {
   GATE_DESCRIPTIONS,
   loadGuardrailsConfigWithPath,
 } from './guardrails/index.js';
-import type { GateNumber } from './guardrails/index.js';
+import type { GateNumber, CheckResult, CheckDefinition } from './guardrails/index.js';
 
 // Load package.json for version info
 const require = createRequire(import.meta.url);
@@ -400,7 +403,16 @@ program
         });
       }
       
-      // Parse options
+      // Print header immediately
+      console.log('');
+      console.log('🔍 AI Guardrail Check Results');
+      console.log('═'.repeat(50));
+      console.log('');
+      
+      // Track whether we're using streaming output (default: yes for TTY)
+      const isStreaming = process.stdout.isTTY !== false;
+      
+      // Parse options with streaming callbacks
       const checkOptions = {
         only: options.only?.split(',').map((s: string) => s.trim()),
         skip: options.skip?.split(',').map((s: string) => s.trim()),
@@ -410,13 +422,34 @@ program
         guardrailsPath: options.guardrails,
         generatedDir: options.generatedDir,
         changedFilesPath: options.changedFiles,
+        // Streaming output callbacks
+        onCheckStart: isStreaming ? (check: CheckDefinition) => {
+          // Clear line and show "running..." message
+          if (process.stdout.isTTY) {
+            process.stdout.write(formatCheckStart(check) + '\r');
+          }
+        } : undefined,
+        onCheckComplete: isStreaming ? (result: CheckResult, check: CheckDefinition) => {
+          // Clear the "running..." line and print result
+          if (process.stdout.isTTY) {
+            process.stdout.clearLine?.(0);
+            process.stdout.cursorTo?.(0);
+          }
+          console.log(formatSingleCheckResult(result, check, options.verbose));
+        } : undefined,
       };
       
       // Run checks
       const summary = await runAllChecks(checkOptions);
       
       // Output results
-      console.log(formatCheckResults(summary, options.verbose, summary.checks));
+      if (isStreaming) {
+        // Only output summary (individual results already printed)
+        console.log(formatCheckSummary(summary, summary.checks));
+      } else {
+        // Non-streaming: output everything at once
+        console.log(formatCheckResults(summary, options.verbose, summary.checks));
+      }
       
       // Exit with error if any checks failed
       if (summary.failed > 0) {

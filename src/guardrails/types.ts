@@ -180,6 +180,10 @@ export interface CheckOptions {
   generatedDir?: string;
   /** File containing list of changed files (for CI) */
   changedFilesPath?: string;
+  /** Callback called when each check completes (for streaming output) */
+  onCheckComplete?: (result: CheckResult, check: CheckDefinition) => void;
+  /** Callback called before each check starts (for streaming output) */
+  onCheckStart?: (check: CheckDefinition) => void;
 }
 
 /**
