@@ -297,7 +297,7 @@ describe('runAllChecks', () => {
       only: ['allowlist'],
     });
     
-    expect(summary.results.length).toBe(4); // All checks in results (allowlist, drift, manifest, security)
+    expect(summary.results.length).toBe(3); // All checks in results (allowlist, drift, manifest)
     
     // Only allowlist should be run
     const allowlistResult = summary.results.find(r => r.name === 'allowlist');
