@@ -257,6 +257,7 @@ Commands:
   generate        Generate code from OpenAPI specifications
   lint            Lint OpenAPI specifications (Spectral)
   check           Run guardrail checks
+  pipeline        Run full guardrails pipeline (Gate 1,2 → Generate → Gate 3,4,5)
   deps            Analyze module dependencies
 ```
 
@@ -281,6 +282,22 @@ Options:
   -m, --module <names>    Module names (default: all)
   --strict                Treat warnings as errors
 ```
+
+### pipeline
+
+Run the full guardrails workflow in correct order: **Gate 1,2 → Generate → Gate 3,4,5**.
+
+```bash
+micro-contracts pipeline [options]
+
+Options:
+  -v, --verbose           Enable verbose output
+  --skip <checks>         Skip specific checks (comma-separated)
+  --continue-on-error     Continue running even if a step fails
+  --contracts-only        Generate contract packages only
+```
+
+> **📖 See [Enforceable Guardrails](docs/development-guardrails.md)** for gate details and CI configuration.
 
 ### deps
 

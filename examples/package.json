@@ -6,6 +6,7 @@
   "description": "Example project demonstrating micro-contracts",
   "scripts": {
     "generate": "node ../dist/cli.js generate",
+    "pipeline": "node ../dist/cli.js pipeline",
     
     "check": "node ../dist/cli.js check",
     "check:all": "node ../dist/cli.js check",

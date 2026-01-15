@@ -87,6 +87,55 @@ micro-contracts check --list
 micro-contracts check --list-gates
 ```
 
+### Pipeline Command
+
+The `pipeline` command runs the full guardrails workflow in the correct order: **Gate 1,2 → Generate → Gate 3,4,5**.
+
+```bash
+micro-contracts pipeline [options]
+
+Options:
+  -v, --verbose               Enable verbose output
+  --skip <checks>             Skip specific checks (comma-separated)
+  --continue-on-error         Continue running even if a step fails
+  -g, --guardrails <path>     Path to guardrails.yaml
+  -c, --config <path>         Path to config file (micro-contracts.config.yaml)
+  -d, --generated-dir <path>  Path to generated files directory (default: "packages/")
+  --no-manifest               Skip manifest generation
+  --skip-lint                 Skip linting before generation
+  --contracts-only            Generate contract packages only
+  --server-only               Generate server routes only
+  --frontend-only             Generate frontend clients only
+  --docs-only                 Generate documentation only
+```
+
+**Examples:**
+
+```bash
+# Run full pipeline (Gate 1,2 → Generate → Gate 3,4,5)
+micro-contracts pipeline
+
+# Run pipeline with verbose output
+micro-contracts pipeline -v
+
+# Skip specific checks
+micro-contracts pipeline --skip drift,manifest
+
+# Continue despite failures (for debugging)
+micro-contracts pipeline --continue-on-error
+
+# Generate only contracts (skip server/frontend)
+micro-contracts pipeline --contracts-only
+```
+
+This command is equivalent to running:
+
+```bash
+micro-contracts check --gate 1,2
+micro-contracts generate
+micro-contracts check --gate 3,4,5
+```
+
 ### Gate 1: Change Allowlist
 
 Prevents unauthorized edits to protected/generated areas.
@@ -454,6 +503,39 @@ npx --yes -p micro-contracts@${MICRO_CONTRACTS_VERSION} micro-contracts check
 
 ### CI workflow
 
+**Option 1: Using `pipeline` command (recommended)**
+
+```yaml
+# .github/workflows/ai-guardrails.yml
+name: ai-guardrails
+on: [pull_request]
+
+env:
+  MC: npx --yes -p micro-contracts@${{ vars.MICRO_CONTRACTS_VERSION }} micro-contracts
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      # Run full pipeline: Gate 1,2 → Generate → Gate 3,4,5
+      - run: ${{ env.MC }} pipeline
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions: { security-events: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with: { languages: javascript }
+      - run: npm ci && npm run build
+      - uses: github/codeql-action/analyze@v3
+```
+
+**Option 2: Separate steps (for finer control)**
+
 ```yaml
 # .github/workflows/ai-guardrails.yml
 name: ai-guardrails
@@ -477,16 +559,6 @@ jobs:
 
       # Gate 3-5 (pinned)
       - run: ${{ env.MC }} check --gate 3,4,5
-
-  codeql:
-    runs-on: ubuntu-latest
-    permissions: { security-events: write }
-    steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
-        with: { languages: javascript }
-      - run: npm ci && npm run build
-      - uses: github/codeql-action/analyze@v3
 ```
 
 ### npm scripts
