@@ -122,14 +122,14 @@ generated:
       // Create only guardrails config, no micro-contracts.config.yaml
       createGuardrailsConfig();
       
-      const { stdout, exitCode } = runCli('pipeline');
+      const { stdout, exitCode } = runCli('pipeline --skip drift,manifest');
       
       // Pipeline should run but skip generation due to missing config
       expect(stdout).toContain('Running AI Guardrails Pipeline');
-      expect(stdout).toContain('Step 1: Pre-generation checks');
-      expect(stdout).toContain('Step 2: Generate');
-      expect(stdout).toContain('No config file found');
-      expect(stdout).toContain('Step 3: Post-generation checks');
+      expect(stdout).toContain('allowlist');
+      expect(stdout).toContain('Generate');
+      expect(stdout).toContain('SKIP');
+      expect(stdout).toContain('Pipeline Summary');
     });
     
     it('should support --verbose option', () => {
@@ -160,8 +160,21 @@ generated:
       const { stdout } = runCli('pipeline --contracts-only --skip drift,manifest');
       
       expect(stdout).toContain('Running AI Guardrails Pipeline');
+      expect(stdout).toContain('allowlist');
+      expect(stdout).toContain('Generate');
+      expect(stdout).toContain('Pipeline Summary');
+    });
+    
+    it('should run full pipeline with verbose mode', () => {
+      createMinimalConfig();
+      createMinimalSpec();
+      createGuardrailsConfig();
+      
+      // Verbose mode shows step headers
+      const { stdout } = runCli('pipeline --contracts-only --skip drift,manifest -v');
+      
+      expect(stdout).toContain('Running AI Guardrails Pipeline');
       expect(stdout).toContain('Step 1: Pre-generation checks');
-      expect(stdout).toContain('Step 2: Generate');
       expect(stdout).toContain('Step 3: Post-generation checks');
       expect(stdout).toContain('Pipeline Summary');
     });
@@ -174,8 +187,8 @@ generated:
       const { stdout, exitCode } = runCli('pipeline --continue-on-error --skip drift');
       
       expect(stdout).toContain('Running AI Guardrails Pipeline');
-      // With --continue-on-error, pipeline should run all steps even if some fail
-      expect(stdout).toContain('Step 3: Post-generation checks');
+      // With --continue-on-error, pipeline should run all steps and show summary
+      expect(stdout).toContain('Pipeline Summary');
     });
   });
   

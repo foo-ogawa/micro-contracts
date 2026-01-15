@@ -466,7 +466,7 @@ program
 program
   .command('pipeline')
   .description('Run full guardrails pipeline: Gate 1,2 → Generate → Gate 3,4,5')
-  .option('-v, --verbose', 'Enable verbose output')
+  .option('-v, --verbose', 'Enable verbose output (show detailed logs)')
   .option('--skip <checks>', 'Skip specific checks (comma-separated)')
   .option('--continue-on-error', 'Continue running even if a step fails')
   .option('-g, --guardrails <path>', 'Path to guardrails.yaml')
@@ -481,7 +481,15 @@ program
   .action(async (options) => {
     try {
       const startTime = Date.now();
+      const verbose = options.verbose;
       let hasFailure = false;
+      let generatePassed = false;
+      let generateDuration = 0;
+      let generateSkipped = false;
+      let generateError: string | null = null;
+      
+      // All results for final summary
+      const allResults: CheckResult[] = [];
       
       console.log('');
       console.log('🚀 Running AI Guardrails Pipeline');
@@ -494,7 +502,7 @@ program
       // Common check options
       const isStreaming = process.stdout.isTTY !== false;
       const baseCheckOptions = {
-        verbose: options.verbose,
+        verbose,
         skip: skipChecks,
         guardrailsPath: options.guardrails,
         generatedDir: options.generatedDir,
@@ -508,47 +516,62 @@ program
             process.stdout.clearLine?.(0);
             process.stdout.cursorTo?.(0);
           }
-          console.log(formatSingleCheckResult(result, check, options.verbose));
+          console.log(formatSingleCheckResult(result, check, verbose));
         } : undefined,
       };
       
       // ========================================
       // Step 1: Gate 1,2 (Pre-generation checks)
       // ========================================
-      console.log('┌─────────────────────────────────────────────────┐');
-      console.log('│ Step 1: Pre-generation checks (Gate 1, 2)       │');
-      console.log('└─────────────────────────────────────────────────┘');
-      console.log('');
+      if (verbose) {
+        console.log('┌─────────────────────────────────────────────────┐');
+        console.log('│ Step 1: Pre-generation checks (Gate 1, 2)       │');
+        console.log('└─────────────────────────────────────────────────┘');
+        console.log('');
+      }
       
       const gate12Summary = await runAllChecks({
         ...baseCheckOptions,
         gates: [1, 2],
       });
       
-      if (!isStreaming) {
-        console.log(formatCheckResults(gate12Summary, options.verbose, gate12Summary.checks));
-      } else {
+      // Collect results (only non-skipped for display count)
+      allResults.push(...gate12Summary.results);
+      
+      if (verbose) {
         console.log(formatCheckSummary(gate12Summary, gate12Summary.checks));
       }
       
       if (gate12Summary.failed > 0) {
         hasFailure = true;
         if (!options.continueOnError) {
+          console.log('');
           console.log('❌ Gate 1,2 failed. Stopping pipeline.');
           console.log('   Use --continue-on-error to continue despite failures.');
           process.exit(1);
         }
-        console.log('⚠️  Gate 1,2 had failures. Continuing due to --continue-on-error.');
-        console.log('');
+        if (verbose) {
+          console.log('⚠️  Gate 1,2 had failures. Continuing due to --continue-on-error.');
+          console.log('');
+        }
       }
       
       // ========================================
       // Step 2: Generate
       // ========================================
-      console.log('┌─────────────────────────────────────────────────┐');
-      console.log('│ Step 2: Generate contracts                      │');
-      console.log('└─────────────────────────────────────────────────┘');
-      console.log('');
+      if (verbose) {
+        console.log('┌─────────────────────────────────────────────────┐');
+        console.log('│ Step 2: Generate contracts                      │');
+        console.log('└─────────────────────────────────────────────────┘');
+        console.log('');
+      }
+      
+      const generateStartTime = Date.now();
+      
+      // Show "running..." indicator for generate
+      if (isStreaming && process.stdout.isTTY) {
+        process.stdout.write('  ⋯ Generate              running...\r');
+      }
       
       try {
         // Load config
@@ -557,74 +580,132 @@ program
           : findConfigFile();
         
         if (!configPath) {
-          console.log('  ○ SKIP  No config file found, skipping generation');
+          generateSkipped = true;
+          generateDuration = Date.now() - generateStartTime;
+          
+          // Clear the running indicator
+          if (isStreaming && process.stdout.isTTY) {
+            process.stdout.clearLine?.(0);
+            process.stdout.cursorTo?.(0);
+          }
+          console.log('  ○ Generate              SKIP (no config file)');
         } else {
-          console.log(`  Using config: ${configPath}`);
+          if (verbose) {
+            console.log(`  Using config: ${configPath}`);
+          }
           const config = loadConfig(configPath);
           
-          // Run generation
-          await generate(config, {
-            skipLint: options.skipLint,
-            contractsOnly: options.contractsOnly,
-            serverOnly: options.serverOnly,
-            frontendOnly: options.frontendOnly,
-            docsOnly: options.docsOnly,
-          });
+          // Suppress console output during generation (unless verbose)
+          const originalLog = console.log;
+          if (!verbose) {
+            console.log = () => {};
+          }
           
-          // Generate manifest if enabled
-          if (options.manifest !== false) {
-            const { config: guardrailsConfig } = loadGuardrailsConfigWithPath(options.guardrails);
+          try {
+            // Run generation
+            await generate(config, {
+              skipLint: options.skipLint,
+              contractsOnly: options.contractsOnly,
+              serverOnly: options.serverOnly,
+              frontendOnly: options.frontendOnly,
+              docsOnly: options.docsOnly,
+            });
             
-            if (guardrailsConfig?.generated && guardrailsConfig.generated.length > 0) {
-              const manifestDir = options.generatedDir || 'packages/';
-              if (fs.existsSync(manifestDir)) {
-                const { manifest, changed } = await generateManifest(manifestDir, {
-                  generatorVersion: pkg.version,
-                });
-                const fileCount = Object.keys(manifest.files).length;
-                
-                if (changed) {
-                  const manifestPath = writeManifest(manifest, manifestDir);
-                  console.log(`  Manifest updated: ${manifestPath} (${fileCount} files)`);
-                } else {
-                  console.log(`  Manifest unchanged (${fileCount} files)`);
+            // Generate manifest if enabled
+            if (options.manifest !== false) {
+              const { config: guardrailsConfig } = loadGuardrailsConfigWithPath(options.guardrails);
+              
+              if (guardrailsConfig?.generated && guardrailsConfig.generated.length > 0) {
+                const manifestDir = options.generatedDir || 'packages/';
+                if (fs.existsSync(manifestDir)) {
+                  const { manifest, changed } = await generateManifest(manifestDir, {
+                    generatorVersion: pkg.version,
+                  });
+                  // Only log in verbose mode
+                  if (verbose) {
+                    const fileCount = Object.keys(manifest.files).length;
+                    if (changed) {
+                      const manifestPath = writeManifest(manifest, manifestDir);
+                      originalLog(`  Manifest updated: ${manifestPath} (${fileCount} files)`);
+                    } else {
+                      originalLog(`  Manifest unchanged (${fileCount} files)`);
+                    }
+                  } else if (changed) {
+                    // Still write the manifest even in non-verbose mode
+                    writeManifest(manifest, manifestDir);
+                  }
                 }
               }
             }
+            
+            generatePassed = true;
+          } finally {
+            // Restore console.log
+            if (!verbose) {
+              console.log = originalLog;
+            }
           }
           
-          console.log('  ✓ Generation complete');
+          generateDuration = Date.now() - generateStartTime;
+          
+          // Clear the running indicator
+          if (isStreaming && process.stdout.isTTY) {
+            process.stdout.clearLine?.(0);
+            process.stdout.cursorTo?.(0);
+          }
+          
+          console.log(`  ✓ Generate              PASS (${generateDuration}ms)`);
+          
+          if (verbose) {
+            console.log('');
+          }
         }
       } catch (error) {
+        generateDuration = Date.now() - generateStartTime;
         hasFailure = true;
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.log(`  ✗ Generation failed: ${errorMessage}`);
+        generateError = error instanceof Error ? error.message : String(error);
+        
+        // Clear the running indicator
+        if (isStreaming && process.stdout.isTTY) {
+          process.stdout.clearLine?.(0);
+          process.stdout.cursorTo?.(0);
+        }
+        
+        console.log(`  ✗ Generate              FAIL (${generateDuration}ms)`);
+        if (verbose || true) { // Always show error message
+          console.log(`    ${generateError}`);
+        }
         
         if (!options.continueOnError) {
           console.log('');
           console.log('❌ Generation failed. Stopping pipeline.');
           process.exit(1);
         }
-        console.log('⚠️  Continuing due to --continue-on-error.');
+        if (verbose) {
+          console.log('⚠️  Continuing due to --continue-on-error.');
+        }
       }
-      console.log('');
       
       // ========================================
       // Step 3: Gate 3,4,5 (Post-generation checks)
       // ========================================
-      console.log('┌─────────────────────────────────────────────────┐');
-      console.log('│ Step 3: Post-generation checks (Gate 3, 4, 5)   │');
-      console.log('└─────────────────────────────────────────────────┘');
-      console.log('');
+      if (verbose) {
+        console.log('');
+        console.log('┌─────────────────────────────────────────────────┐');
+        console.log('│ Step 3: Post-generation checks (Gate 3, 4, 5)   │');
+        console.log('└─────────────────────────────────────────────────┘');
+        console.log('');
+      }
       
       const gate345Summary = await runAllChecks({
         ...baseCheckOptions,
         gates: [3, 4, 5],
       });
       
-      if (!isStreaming) {
-        console.log(formatCheckResults(gate345Summary, options.verbose, gate345Summary.checks));
-      } else {
+      // Collect results
+      allResults.push(...gate345Summary.results);
+      
+      if (verbose) {
         console.log(formatCheckSummary(gate345Summary, gate345Summary.checks));
       }
       
@@ -636,9 +717,9 @@ program
       // Final Summary
       // ========================================
       const totalDuration = Date.now() - startTime;
-      const totalPassed = gate12Summary.passed + gate345Summary.passed;
-      const totalFailed = gate12Summary.failed + gate345Summary.failed;
-      const totalSkipped = gate12Summary.skipped + gate345Summary.skipped;
+      const totalPassed = gate12Summary.passed + gate345Summary.passed + (generatePassed ? 1 : 0);
+      const totalFailed = gate12Summary.failed + gate345Summary.failed + (generateError ? 1 : 0);
+      const totalSkipped = gate12Summary.skipped + gate345Summary.skipped + (generateSkipped ? 1 : 0);
       
       console.log('');
       console.log('━'.repeat(50));
@@ -655,6 +736,20 @@ program
       
       if (hasFailure) {
         console.log('❌ Pipeline completed with failures.');
+        
+        // Show failed check details
+        const failedResults = allResults.filter(r => r.status === 'fail' && r.details && r.details.length > 0);
+        if (failedResults.length > 0) {
+          console.log('');
+          console.log('📋 Failed Check Details:');
+          for (const result of failedResults) {
+            console.log(`  ▶ ${result.name}`);
+            for (const detail of result.details!) {
+              console.log(`    ${detail}`);
+            }
+          }
+        }
+        
         process.exit(1);
       } else {
         console.log('✅ Pipeline completed successfully!');
