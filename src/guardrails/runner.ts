@@ -104,15 +104,19 @@ function getAllChecks(options: CheckOptions): CheckDefinition[] {
   // Add custom checks
   allChecks.push(...customChecks);
 
+  // Create index map to preserve original order within same gate
+  const indexMap = new Map(allChecks.map((c, i) => [c.name, i]));
+
   // Sort by gate number (G1 → G2 → G3 → G4 → G5, then undefined)
+  // Within the same gate, preserve the order defined in guardrails.yaml
   allChecks.sort((a, b) => {
     const gateA = a.gate ?? 999;
     const gateB = b.gate ?? 999;
     if (gateA !== gateB) {
       return gateA - gateB;
     }
-    // Same gate: preserve original order by name
-    return a.name.localeCompare(b.name);
+    // Same gate: preserve original order (config file order)
+    return (indexMap.get(a.name) ?? 0) - (indexMap.get(b.name) ?? 0);
   });
 
   return allChecks;

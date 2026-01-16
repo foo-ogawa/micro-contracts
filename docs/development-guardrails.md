@@ -38,6 +38,8 @@ The following diagram illustrates the overall architecture of the guardrails sys
 | **4** | Code Quality | `server/**`, `frontend/**` | Type errors, lint issues, failing tests |
 | **5** | Doc & Architectural Consistency | `docs/**`, all code | Doc/code mismatch, broken references, architecture drift |
 
+Checks are executed in gate order (G1 → G2 → ... → G5), and within the same gate, checks run in the order they are defined in `guardrails.yaml`.
+
 ---
 
 ## Available Checks
