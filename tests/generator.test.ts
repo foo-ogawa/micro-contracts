@@ -418,6 +418,143 @@ components:
       expect(fs.existsSync(path.join(tmpDir, 'packages/contract/core/index.ts'))).toBe(true);
       expect(fs.existsSync(path.join(tmpDir, 'packages/contract/users/index.ts'))).toBe(false);
     });
+
+    it('should skip outputs with enabled: false', async () => {
+      // Create spec
+      const specPath = path.join(tmpDir, 'spec.yaml');
+      fs.writeFileSync(specPath, `
+openapi: 3.0.3
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /api/users:
+    get:
+      operationId: getUsers
+      x-micro-contracts-service: User
+      x-micro-contracts-method: getUsers
+      responses:
+        '200':
+          description: Success
+components:
+  schemas: {}
+`);
+
+      // Create templates
+      const serverTemplatePath = path.join(tmpDir, 'server.hbs');
+      fs.writeFileSync(serverTemplatePath, `// Server routes for {{moduleName}}`);
+      
+      const frontendTemplatePath = path.join(tmpDir, 'frontend.hbs');
+      fs.writeFileSync(frontendTemplatePath, `// Frontend client for {{moduleName}}`);
+
+      // Create config with frontend disabled
+      const config: MultiModuleConfig = {
+        defaults: {
+          contract: { output: path.join(tmpDir, 'packages/contract/{module}') },
+          contractPublic: { output: path.join(tmpDir, 'packages/contract-published/{module}') },
+          outputs: {
+            'server-routes': {
+              output: path.join(tmpDir, 'server/src/{module}/routes.generated.ts'),
+              template: serverTemplatePath,
+            },
+            'frontend-api': {
+              output: path.join(tmpDir, 'frontend/src/{module}/api.generated.ts'),
+              template: frontendTemplatePath,
+            },
+          },
+        },
+        modules: {
+          core: {
+            openapi: specPath,
+            outputs: {
+              'frontend-api': {
+                enabled: false,  // Disable frontend for this module
+              },
+            },
+          },
+        },
+      };
+
+      // Generate
+      await generate(config, { skipLint: true });
+
+      // Server routes should be generated
+      const serverPath = path.join(tmpDir, 'server/src/core/routes.generated.ts');
+      expect(fs.existsSync(serverPath)).toBe(true);
+      
+      // Frontend should NOT be generated (enabled: false)
+      const frontendPath = path.join(tmpDir, 'frontend/src/core/api.generated.ts');
+      expect(fs.existsSync(frontendPath)).toBe(false);
+    });
+
+    it('should skip legacy frontend with enabled: false', async () => {
+      // Create spec
+      const specPath = path.join(tmpDir, 'spec.yaml');
+      fs.writeFileSync(specPath, `
+openapi: 3.0.3
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /api/users:
+    get:
+      operationId: getUsers
+      x-micro-contracts-service: User
+      x-micro-contracts-method: getUsers
+      responses:
+        '200':
+          description: Success
+components:
+  schemas: {}
+`);
+
+      // Create templates
+      const serverTemplatePath = path.join(tmpDir, 'server.hbs');
+      fs.writeFileSync(serverTemplatePath, `// Server routes`);
+      
+      const frontendTemplatePath = path.join(tmpDir, 'frontend.hbs');
+      fs.writeFileSync(frontendTemplatePath, `// Frontend client`);
+
+      // Create config with legacy frontend disabled
+      const config: MultiModuleConfig = {
+        defaults: {
+          contract: { output: path.join(tmpDir, 'packages/contract/{module}') },
+          contractPublic: { output: path.join(tmpDir, 'packages/contract-published/{module}') },
+          server: {
+            output: path.join(tmpDir, 'server/src/{module}'),
+            routes: 'routes.generated.ts',
+          },
+          frontend: {
+            output: path.join(tmpDir, 'frontend/src/{module}'),
+            client: 'api.generated.ts',
+            service: 'service.generated.ts',
+          },
+          templates: {
+            server: serverTemplatePath,
+            frontend: frontendTemplatePath,
+          },
+        },
+        modules: {
+          core: {
+            openapi: specPath,
+            frontend: {
+              enabled: false,  // Disable frontend for this module
+            },
+          },
+        },
+      };
+
+      // Generate
+      await generate(config, { skipLint: true });
+
+      // Server routes should be generated
+      const serverPath = path.join(tmpDir, 'server/src/core/routes.generated.ts');
+      expect(fs.existsSync(serverPath)).toBe(true);
+      
+      // Frontend should NOT be generated (enabled: false)
+      const frontendPath = path.join(tmpDir, 'frontend/src/core/api.generated.ts');
+      expect(fs.existsSync(frontendPath)).toBe(false);
+    });
   });
 });
 

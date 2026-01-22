@@ -243,6 +243,9 @@ modules:
     openapi: openapi/billing.yaml
     dependsOn:
       - core.User.getUsers
+    outputs:
+      frontend-api:
+        enabled: false    # Disable frontend generation for this module
 ```
 
 ---

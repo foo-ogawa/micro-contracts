@@ -29,7 +29,7 @@ import {
 import { 
   buildTemplateContext, 
   generateWithTemplate,
-  loadTemplateWithResolution,
+  loadTemplate,
   resolveTemplatePath,
 } from './templateProcessor.js';
 import {
@@ -508,11 +508,7 @@ async function generateFromOutputs(
         continue;
       }
       
-      const template = loadTemplateWithResolution({
-        specDir,
-        moduleName: config.name,
-        templateName: path.basename(output.template),
-      });
+      const template = loadTemplate(templatePath);
       
       const content = template(extendedContext);
       
