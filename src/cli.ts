@@ -11,8 +11,9 @@ import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
 import yaml from 'yaml';
-import { generate, loadConfig, loadOpenAPISpec, lintSpec, formatLintResults } from './generator/index.js';
+import { generate, loadConfig, loadOpenAPISpec, lintSpec, formatLintResults, computeInputHash } from './generator/index.js';
 import type { GeneratorConfig, MultiModuleConfig } from './types.js';
+import { isMultiModuleConfig } from './types.js';
 import { getStarterTemplates } from './cli/templates.js';
 import {
   runAllChecks,
@@ -24,6 +25,7 @@ import {
   createGuardrailsConfig,
   generateManifest,
   writeManifest,
+  canSkipGeneration,
   GATE_DESCRIPTIONS,
   loadGuardrailsConfigWithPath,
 } from './guardrails/index.js';
@@ -53,6 +55,8 @@ program
   .option('--skip-lint', 'Skip linting before generation')
   .option('--no-manifest', 'Skip manifest generation even if guardrails are configured')
   .option('--manifest-dir <path>', 'Directory for manifest (default: packages/)')
+  .option('--force', 'Bypass input hash cache and always regenerate')
+  .option('--no-cache', 'Run without reading or writing input hash cache')
   .action(async (options) => {
     try {
       let config: MultiModuleConfig | GeneratorConfig;
@@ -76,6 +80,23 @@ program
       console.log(`Using config: ${configPath}`);
         config = loadConfig(configPath);
 
+      // Compute input hash for skip logic (multi-module config only)
+      const useCache = options.cache !== false && !options.force;
+      let inputHash: string | undefined;
+
+      if (isMultiModuleConfig(config)) {
+        inputHash = computeInputHash(config, configPath, pkg.version);
+
+        if (useCache) {
+          const manifestDir = options.manifestDir || 'packages/';
+          const skipCheck = await canSkipGeneration(manifestDir, inputHash);
+          if (skipCheck.skip) {
+            console.log(`No input changes detected, skipping generation (${skipCheck.reason})`);
+            return;
+          }
+        }
+      }
+
       // Run generation
       await generate(config, {
         contractsOnly: options.contractsOnly,
@@ -95,8 +116,10 @@ program
         if (guardrailsConfig?.generated && guardrailsConfig.generated.length > 0) {
           const manifestDir = options.manifestDir || 'packages/';
           if (fs.existsSync(manifestDir)) {
+            const manifestInputHash = (options.cache !== false) ? inputHash : undefined;
             const { manifest, changed } = await generateManifest(manifestDir, {
               generatorVersion: pkg.version,
+              inputHash: manifestInputHash,
             });
             const fileCount = Object.keys(manifest.files).length;
             
@@ -478,6 +501,8 @@ program
   .option('--server-only', 'Generate server routes only')
   .option('--frontend-only', 'Generate frontend clients only')
   .option('--docs-only', 'Generate documentation only')
+  .option('--force', 'Bypass input hash cache and always regenerate')
+  .option('--no-cache', 'Run without reading or writing input hash cache')
   .action(async (options) => {
     try {
       const startTime = Date.now();
@@ -559,6 +584,8 @@ program
       // ========================================
       // Step 2: Generate
       // ========================================
+      let generationCacheSkipped = false;
+
       if (verbose) {
         console.log('┌─────────────────────────────────────────────────┐');
         console.log('│ Step 2: Generate contracts                      │');
@@ -594,70 +621,98 @@ program
             console.log(`  Using config: ${configPath}`);
           }
           const config = loadConfig(configPath);
-          
-          // Suppress console output during generation (unless verbose)
-          const originalLog = console.log;
-          if (!verbose) {
-            console.log = () => {};
+
+          // Compute input hash for cache (multi-module only)
+          const useCache = options.cache !== false && !options.force;
+          let inputHash: string | undefined;
+
+          if (isMultiModuleConfig(config)) {
+            inputHash = computeInputHash(config, configPath, pkg.version);
+
+            if (useCache) {
+              const manifestDir = options.generatedDir || 'packages/';
+              const skipCheck = await canSkipGeneration(manifestDir, inputHash);
+              if (skipCheck.skip) {
+                generationCacheSkipped = true;
+                generateSkipped = true;
+                generateDuration = Date.now() - generateStartTime;
+
+                if (isStreaming && process.stdout.isTTY) {
+                  process.stdout.clearLine?.(0);
+                  process.stdout.cursorTo?.(0);
+                }
+                console.log(`  ○ Generate              SKIP (${skipCheck.reason})`);
+              }
+            }
           }
-          
-          try {
-            // Run generation
-            await generate(config, {
-              skipLint: options.skipLint,
-              contractsOnly: options.contractsOnly,
-              serverOnly: options.serverOnly,
-              frontendOnly: options.frontendOnly,
-              docsOnly: options.docsOnly,
-            });
+
+          if (!generationCacheSkipped) {
+            // Suppress console output during generation (unless verbose)
+            const originalLog = console.log;
+            if (!verbose) {
+              console.log = () => {};
+            }
             
-            // Generate manifest if enabled
-            if (options.manifest !== false) {
-              const { config: guardrailsConfig } = loadGuardrailsConfigWithPath(options.guardrails);
+            try {
+              // Run generation
+              await generate(config, {
+                skipLint: options.skipLint,
+                contractsOnly: options.contractsOnly,
+                serverOnly: options.serverOnly,
+                frontendOnly: options.frontendOnly,
+                docsOnly: options.docsOnly,
+              });
               
-              if (guardrailsConfig?.generated && guardrailsConfig.generated.length > 0) {
-                const manifestDir = options.generatedDir || 'packages/';
-                if (fs.existsSync(manifestDir)) {
-                  const { manifest, changed } = await generateManifest(manifestDir, {
-                    generatorVersion: pkg.version,
-                  });
-                  // Only log in verbose mode
-                  if (verbose) {
-                    const fileCount = Object.keys(manifest.files).length;
-                    if (changed) {
-                      const manifestPath = writeManifest(manifest, manifestDir);
-                      originalLog(`  Manifest updated: ${manifestPath} (${fileCount} files)`);
-                    } else {
-                      originalLog(`  Manifest unchanged (${fileCount} files)`);
+              // Generate manifest if enabled
+              if (options.manifest !== false) {
+                const { config: guardrailsConfig } = loadGuardrailsConfigWithPath(options.guardrails);
+                
+                if (guardrailsConfig?.generated && guardrailsConfig.generated.length > 0) {
+                  const manifestDir = options.generatedDir || 'packages/';
+                  if (fs.existsSync(manifestDir)) {
+                    const manifestInputHash = (options.cache !== false) ? inputHash : undefined;
+                    const { manifest, changed } = await generateManifest(manifestDir, {
+                      generatorVersion: pkg.version,
+                      inputHash: manifestInputHash,
+                    });
+                    // Only log in verbose mode
+                    if (verbose) {
+                      const fileCount = Object.keys(manifest.files).length;
+                      if (changed) {
+                        const manifestPath = writeManifest(manifest, manifestDir);
+                        originalLog(`  Manifest updated: ${manifestPath} (${fileCount} files)`);
+                      } else {
+                        originalLog(`  Manifest unchanged (${fileCount} files)`);
+                      }
+                    } else if (changed) {
+                      // Still write the manifest even in non-verbose mode
+                      writeManifest(manifest, manifestDir);
                     }
-                  } else if (changed) {
-                    // Still write the manifest even in non-verbose mode
-                    writeManifest(manifest, manifestDir);
                   }
                 }
               }
+              
+              generatePassed = true;
+            } finally {
+              // Restore console.log
+              if (!verbose) {
+                console.log = originalLog;
+              }
             }
             
-            generatePassed = true;
-          } finally {
-            // Restore console.log
-            if (!verbose) {
-              console.log = originalLog;
+            generateDuration = Date.now() - generateStartTime;
+            
+            // Clear the running indicator
+            if (isStreaming && process.stdout.isTTY) {
+              process.stdout.clearLine?.(0);
+              process.stdout.cursorTo?.(0);
             }
-          }
-          
-          generateDuration = Date.now() - generateStartTime;
-          
-          // Clear the running indicator
-          if (isStreaming && process.stdout.isTTY) {
-            process.stdout.clearLine?.(0);
-            process.stdout.cursorTo?.(0);
-          }
-          
-          console.log(`  ✓ Generate              PASS (${generateDuration}ms)`);
-          
-          if (verbose) {
-            console.log('');
+            
+            console.log(`  ✓ Generate              PASS (${generateDuration}ms)`);
+            
+            if (verbose) {
+              console.log('');
+            }
           }
         }
       } catch (error) {
@@ -697,8 +752,15 @@ program
         console.log('');
       }
       
+      // When generation was skipped via cache, drift/manifest are
+      // already verified — skip them to avoid redundant work.
+      const gate3Skips = generationCacheSkipped
+        ? [...skipChecks, 'drift', 'manifest']
+        : skipChecks;
+
       const gate345Summary = await runAllChecks({
         ...baseCheckOptions,
+        skip: gate3Skips,
         gates: [3, 4, 5],
       });
       

@@ -62,6 +62,7 @@ export {
   writeManifest,
   loadManifest,
   verifyManifest,
+  canSkipGeneration,
   runManifestCheck,
   formatManifestResult,
 } from './manifest.js';

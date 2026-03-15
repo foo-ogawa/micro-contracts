@@ -303,6 +303,8 @@ Generate code from OpenAPI specifications.
 | `--skip-lint` | Skip linting before generation |
 | `--no-manifest` | Skip manifest generation |
 | `--manifest-dir <path>` | Directory for manifest (default: `packages/`) |
+| `--force` | Bypass input hash cache and always regenerate |
+| `--no-cache` | Run without reading or writing input hash cache |
 
 ### init \<module\>
 
@@ -358,6 +360,8 @@ Run full guardrails pipeline: **Gate 1,2 → Generate → Gate 3,4,5**.
 | `--server-only` | Generate server routes only |
 | `--frontend-only` | Generate frontend clients only |
 | `--docs-only` | Generate documentation only |
+| `--force` | Bypass input hash cache and always regenerate |
+| `--no-cache` | Run without reading or writing input hash cache |
 
 > See **[Enforceable Guardrails](docs/development-guardrails.md)** for gate details and CI configuration.
 

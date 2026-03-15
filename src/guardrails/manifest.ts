@@ -93,12 +93,14 @@ export async function generateManifest(
   baseDir: string,
   options: {
     generatorVersion?: string;
+    inputHash?: string;
     sourceMap?: Map<string, string>;  // file -> source mapping
     patterns?: string[];
   } = {}
 ): Promise<GenerateManifestResult> {
   const {
     generatorVersion = '1.0.0',
+    inputHash,
     sourceMap = new Map(),
     patterns = ['**/*'],
   } = options;
@@ -134,8 +136,12 @@ export async function generateManifest(
   // Check if generator version has changed
   const versionChanged = !existingManifest || existingManifest.generatorVersion !== generatorVersion;
   
-  // Content is considered changed if files or version changed
-  const changed = filesChanged || versionChanged;
+  // Check if input hash has changed
+  const inputHashChanged = inputHash !== undefined &&
+    (!existingManifest || existingManifest.inputHash !== inputHash);
+  
+  // Content is considered changed if files, version, or input hash changed
+  const changed = filesChanged || versionChanged || inputHashChanged;
   
   // Only update timestamp if something changed
   const updatedAt = changed 
@@ -148,6 +154,10 @@ export async function generateManifest(
     files: fileInfos,
   };
   
+  if (inputHash !== undefined) {
+    manifest.inputHash = inputHash;
+  }
+  
   // Only include updatedAt if we have a timestamp
   if (updatedAt) {
     manifest.updatedAt = updatedAt;
@@ -157,6 +167,41 @@ export async function generateManifest(
     manifest,
     changed,
   };
+}
+
+/**
+ * Check whether generation can be skipped.
+ *
+ * Returns `skip: true` only when:
+ *  1. A manifest exists with a matching `inputHash`, AND
+ *  2. Every generated file on disk still matches the manifest hashes.
+ */
+export async function canSkipGeneration(
+  manifestDir: string,
+  inputHash: string,
+): Promise<{ skip: boolean; reason: string }> {
+  const manifest = loadManifest(manifestDir);
+
+  if (!manifest) {
+    return { skip: false, reason: 'No manifest found' };
+  }
+
+  if (!manifest.inputHash) {
+    return { skip: false, reason: 'Manifest has no inputHash (pre-cache version)' };
+  }
+
+  if (manifest.inputHash !== inputHash) {
+    return { skip: false, reason: 'Input files have changed' };
+  }
+
+  // Input hash matches — verify that output files are intact
+  const verification = await verifyManifest(manifestDir);
+  if (!verification.valid) {
+    const count = verification.mismatches.length;
+    return { skip: false, reason: `${count} generated file(s) have been modified` };
+  }
+
+  return { skip: true, reason: 'Input and output hashes match' };
 }
 
 /**

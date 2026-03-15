@@ -45,6 +45,7 @@ export { generateServiceInterfaces } from './serviceGenerator.js';
 export { lintSpec, formatLintResults } from './linter.js';
 export { processOverlays, generateExtensionInterfaces } from './overlayProcessor.js';
 export { buildTemplateContext, generateWithTemplate } from './templateProcessor.js';
+export { collectInputFiles, computeInputHash } from './inputHash.js';
 
 /**
  * Write file only if content has changed (ignoring timestamp in header).
