@@ -1,9 +1,12 @@
 /**
  * Service interface generator from OpenAPI specification
  * 
- * Generates TypeScript interfaces grouped by x-micro-contracts-service extension
+ * Generates TypeScript interfaces grouped by x-micro-contracts-service extension.
+ * Supports custom Handlebars templates for service interface generation.
  */
 
+import fs from 'fs';
+import Handlebars from 'handlebars';
 import type { 
   OpenAPISpec, 
   OperationObject,
@@ -16,6 +19,32 @@ import { isReference, getRefName } from '../types.js';
 export interface ServiceGeneratorOptions {
   /** Only include public endpoints (x-public: true) */
   publicOnly?: boolean;
+  /** Path to custom Handlebars template for service interface generation */
+  serviceTemplate?: string;
+}
+
+/**
+ * Context passed to custom service interface templates (per-service)
+ */
+export interface ServiceTemplateContext {
+  serviceName: string;
+  interfaceName: string;
+  methods: ServiceMethodTemplateContext[];
+  imports: string[];
+  spec: OpenAPISpec;
+}
+
+export interface ServiceMethodTemplateContext {
+  name: string;
+  inputType: string;
+  returnType: string;
+  returnTypeStr: string;
+  httpMethod: string;
+  path: string;
+  isPublished: boolean;
+  parameters: ParameterObject[];
+  requestBodySchema?: string;
+  extensions: Record<string, unknown>;
 }
 
 /**
@@ -26,13 +55,19 @@ export function generateServiceInterfaces(
   spec: OpenAPISpec,
   options: ServiceGeneratorOptions = {}
 ): Map<string, string> {
-  const { publicOnly = false } = options;
+  const { publicOnly = false, serviceTemplate } = options;
   
   const services = extractServiceInfo(spec, publicOnly);
   const result = new Map<string, string>();
   
+  const compiledTemplate = serviceTemplate
+    ? compileServiceTemplate(serviceTemplate)
+    : null;
+  
   for (const service of services) {
-    const content = generateServiceInterface(service, spec);
+    const content = compiledTemplate
+      ? generateServiceInterfaceFromTemplate(compiledTemplate, service, spec)
+      : generateServiceInterface(service, spec);
     result.set(service.name, content);
   }
   
@@ -41,6 +76,17 @@ export function generateServiceInterfaces(
   result.set('index', indexContent);
   
   return result;
+}
+
+/**
+ * Load and compile a custom service template
+ */
+function compileServiceTemplate(templatePath: string): Handlebars.TemplateDelegate {
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Service template not found: ${templatePath}`);
+  }
+  const content = fs.readFileSync(templatePath, 'utf-8');
+  return Handlebars.compile(content, { noEscape: true });
 }
 
 /**
@@ -135,14 +181,33 @@ function extractMethodInfo(
   }
   
   // Get all params (path + query combined)
-  const queryParams = (operation.parameters || []).filter(
-    (p): p is ParameterObject => !isReference(p) && p.in === 'query'
+  const allParams = (operation.parameters || []).filter(
+    (p): p is ParameterObject => !isReference(p)
   );
-  const pathParams = (operation.parameters || []).filter(
-    (p): p is ParameterObject => !isReference(p) && p.in === 'path'
-  );
+  const queryParams = allParams.filter(p => p.in === 'query');
+  const pathParams = allParams.filter(p => p.in === 'path');
   const hasParams = queryParams.length > 0 || pathParams.length > 0;
   const paramsType = hasParams ? `${typeNameBase}Params` : undefined;
+  
+  // Request body schema name
+  let requestBodySchema: string | undefined;
+  if (operation.requestBody) {
+    const reqBody = isReference(operation.requestBody)
+      ? spec.components?.requestBodies?.[getRefName(operation.requestBody.$ref)]
+      : operation.requestBody;
+    if (reqBody?.content?.['application/json']?.schema) {
+      const schema = reqBody.content['application/json'].schema;
+      requestBodySchema = isReference(schema) ? getRefName(schema.$ref) : undefined;
+    }
+  }
+  
+  // Collect all x-* extensions from the operation
+  const extensions: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(operation as unknown as Record<string, unknown>)) {
+    if (key.startsWith('x-')) {
+      extensions[key] = value;
+    }
+  }
   
   return {
     name: serviceMethod,
@@ -153,6 +218,9 @@ function extractMethodInfo(
     requestType,
     responseType,
     paramsType,
+    parameters: allParams,
+    requestBodySchema,
+    extensions,
   };
 }
 
@@ -211,6 +279,60 @@ function generateServiceInterface(service: ServiceInfo, spec: OpenAPISpec): stri
   lines.push('}');
   
   return lines.join('\n');
+}
+
+/**
+ * Generate service interface content using a custom Handlebars template
+ */
+function generateServiceInterfaceFromTemplate(
+  template: Handlebars.TemplateDelegate,
+  service: ServiceInfo,
+  spec: OpenAPISpec
+): string {
+  const imports = collectImportsForService(service);
+  
+  const methods: ServiceMethodTemplateContext[] = service.methods.map(method => {
+    const inputType = `${service.name}_${method.name}Input`;
+    const returnType = method.responseType || 'void';
+    const returnTypeStr = returnType === 'void' ? 'Promise<void>' : `Promise<${returnType}>`;
+    
+    return {
+      name: method.name,
+      inputType,
+      returnType,
+      returnTypeStr,
+      httpMethod: method.httpMethod.toUpperCase(),
+      path: method.path,
+      isPublished: method.isPublished,
+      parameters: method.parameters,
+      requestBodySchema: method.requestBodySchema,
+      extensions: method.extensions,
+    };
+  });
+  
+  const context: ServiceTemplateContext = {
+    serviceName: service.name,
+    interfaceName: `${service.name}ServiceApi`,
+    methods,
+    imports,
+    spec,
+  };
+  
+  return template(context);
+}
+
+/**
+ * Collect import type names needed for a service
+ */
+function collectImportsForService(service: ServiceInfo): string[] {
+  const types = new Set<string>();
+  for (const method of service.methods) {
+    types.add(`${service.name}_${method.name}Input`);
+    if (method.responseType && method.responseType !== 'void') {
+      types.add(method.responseType);
+    }
+  }
+  return Array.from(types).sort();
 }
 
 /**

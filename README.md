@@ -217,7 +217,43 @@ import type { User } from '@project/contract-published/core/schemas';
 
 ## Configuration
 
-Create `micro-contracts.config.yaml`:
+Create `micro-contracts.config.yaml`. All paths support `{module}` placeholder.
+
+### defaults
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `contract.output` | string | yes | Output directory for contract packages |
+| `contract.serviceTemplate` | string | no | Custom Handlebars template for service interface generation |
+| `contractPublic.output` | string | yes | Output directory for public contract packages |
+| `outputs.<id>.output` | string | yes | Output file path |
+| `outputs.<id>.template` | string | yes | Handlebars template file path |
+| `outputs.<id>.overwrite` | boolean | no | Overwrite existing files (default: `true`) |
+| `outputs.<id>.condition` | string | no | `hasPublicEndpoints` \| `hasOverlays` \| `always` (default: `always`) |
+| `outputs.<id>.enabled` | boolean | no | Enable/disable this output (default: `true`) |
+| `outputs.<id>.config` | object | no | Template-specific configuration passed to context |
+| `overlays.shared` | string[] | no | Overlay files applied to all modules |
+| `overlays.collision` | string | no | `error` \| `warn` \| `last-wins` (default: `error`) |
+| `docs.enabled` | boolean | no | Enable documentation generation (default: `true`) |
+| `docs.template` | string | no | Documentation template |
+| `sharedModuleName` | string | no | Shared module name for overlays |
+
+### modules.\<name\>
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `openapi` | string | yes | Path to OpenAPI spec file |
+| `contract.output` | string | no | Override contract output directory |
+| `contract.serviceTemplate` | string | no | Override custom service interface template |
+| `contractPublic.output` | string | no | Override public contract output directory |
+| `outputs.<id>.enabled` | boolean | no | Enable/disable specific output for this module |
+| `outputs.<id>.*` | — | no | Override any output config field |
+| `overlays` | string[] | no | Module-specific overlay files |
+| `dependsOn` | string[] | no | Dependencies (`{module}.{service}.{method}`) |
+| `spectral` | string | no | Module-specific Spectral config path |
+| `docs.enabled` | boolean | no | Override documentation generation |
+
+### Example
 
 ```yaml
 defaults:
@@ -245,73 +281,116 @@ modules:
       - core.User.getUsers
     outputs:
       frontend-api:
-        enabled: false    # Disable frontend generation for this module
+        enabled: false
 ```
 
 ---
 
 ## CLI Reference
 
-```bash
-micro-contracts <command> [options]
-
-Commands:
-  init <module>   Initialize a new module structure
-  generate        Generate code from OpenAPI specifications
-  lint            Lint OpenAPI specifications (Spectral)
-  check           Run guardrail checks
-  pipeline        Run full guardrails pipeline (Gate 1,2 → Generate → Gate 3,4,5)
-  deps            Analyze module dependencies
-```
-
 ### generate
 
-```bash
-micro-contracts generate [options]
+Generate code from OpenAPI specifications.
 
-Options:
-  -m, --module <names>    Module names, comma-separated (default: all)
-  --contracts-only        Generate contract packages only
-  --server-only           Generate server routes only
-  --frontend-only         Generate frontend clients only
-```
+| Option | Description |
+|--------|-------------|
+| `-c, --config <path>` | Path to config file |
+| `-m, --module <names>` | Module names, comma-separated (default: all) |
+| `--contracts-only` | Generate contract packages only |
+| `--server-only` | Generate server routes only |
+| `--frontend-only` | Generate frontend clients only |
+| `--docs-only` | Generate documentation only |
+| `--skip-lint` | Skip linting before generation |
+| `--no-manifest` | Skip manifest generation |
+| `--manifest-dir <path>` | Directory for manifest (default: `packages/`) |
 
-### lint
+### init \<module\>
 
-```bash
-micro-contracts lint [options]
+Initialize a new module structure with starter templates.
 
-Options:
-  -m, --module <names>    Module names (default: all)
-  --strict                Treat warnings as errors
-```
+| Option | Description |
+|--------|-------------|
+| `-d, --dir <path>` | Base directory (default: `src`) |
+| `-i, --openapi <path>` | OpenAPI spec to process (auto-adds extensions) |
+| `-o, --output <path>` | Output path for processed OpenAPI |
+| `--skip-templates` | Skip creating starter templates |
+
+### lint \<input\>
+
+Lint OpenAPI specification.
+
+| Option | Description |
+|--------|-------------|
+| `--strict` | Treat warnings as errors |
+
+### check
+
+Run guardrail checks.
+
+| Option | Description |
+|--------|-------------|
+| `--only <checks>` | Run only specific checks (comma-separated) |
+| `--skip <checks>` | Skip specific checks (comma-separated) |
+| `--gate <gates>` | Run checks for specific gates only (1-5) |
+| `-v, --verbose` | Enable verbose output |
+| `--fix` | Auto-fix issues where possible |
+| `-g, --guardrails <path>` | Path to `guardrails.yaml` |
+| `-d, --generated-dir <path>` | Path to generated files directory (default: `packages/`) |
+| `--changed-files <path>` | Path to file containing changed files (for CI) |
+| `--list` | List available checks |
+| `--list-gates` | List available gates |
 
 ### pipeline
 
-Run the full guardrails workflow in correct order: **Gate 1,2 → Generate → Gate 3,4,5**.
+Run full guardrails pipeline: **Gate 1,2 → Generate → Gate 3,4,5**.
 
-```bash
-micro-contracts pipeline [options]
+| Option | Description |
+|--------|-------------|
+| `-c, --config <path>` | Path to config file |
+| `-v, --verbose` | Enable verbose output |
+| `--skip <checks>` | Skip specific checks (comma-separated) |
+| `--continue-on-error` | Continue running even if a step fails |
+| `-g, --guardrails <path>` | Path to `guardrails.yaml` |
+| `-d, --generated-dir <path>` | Path to generated files directory (default: `packages/`) |
+| `--no-manifest` | Skip manifest generation |
+| `--skip-lint` | Skip linting before generation |
+| `--contracts-only` | Generate contract packages only |
+| `--server-only` | Generate server routes only |
+| `--frontend-only` | Generate frontend clients only |
+| `--docs-only` | Generate documentation only |
 
-Options:
-  -v, --verbose           Enable verbose output
-  --skip <checks>         Skip specific checks (comma-separated)
-  --continue-on-error     Continue running even if a step fails
-  --contracts-only        Generate contract packages only
-```
-
-> **📖 See [Enforceable Guardrails](docs/development-guardrails.md)** for gate details and CI configuration.
+> See **[Enforceable Guardrails](docs/development-guardrails.md)** for gate details and CI configuration.
 
 ### deps
 
-```bash
-micro-contracts deps [options]
+Analyze module dependencies.
 
-Options:
-  --graph                 Display dependency graph
-  --who-depends-on <api>  Find modules that depend on specific API
-  --impact <api>          Analyze impact of changing specific API
-```
+| Option | Description |
+|--------|-------------|
+| `-c, --config <path>` | Path to config file |
+| `-m, --module <name>` | Module to analyze |
+| `--graph` | Output dependency graph (Mermaid) |
+| `--impact <ref>` | Analyze impact of changing a specific API |
+| `--who-depends-on <ref>` | Find modules that depend on a specific API |
+| `--validate` | Validate dependencies against OpenAPI declarations |
+
+### guardrails-init
+
+Create a `guardrails.yaml` configuration file.
+
+| Option | Description |
+|--------|-------------|
+| `-o, --output <path>` | Output path (default: `guardrails.yaml`) |
+
+### manifest
+
+Generate or verify manifest for generated artifacts.
+
+| Option | Description |
+|--------|-------------|
+| `-d, --dir <path>` | Directory to scan (default: `packages/`) |
+| `--verify` | Verify existing manifest |
+| `-o, --output <path>` | Output manifest path |
 
 ---
 

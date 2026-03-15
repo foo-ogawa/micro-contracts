@@ -156,6 +156,8 @@ export interface ModuleDefaults {
   contract?: {
     /** Output directory (supports {module} placeholder) */
     output: string;
+    /** Path to custom Handlebars template for service interface generation */
+    serviceTemplate?: string;
   };
 
   /** Public contract extraction config */
@@ -272,6 +274,8 @@ export interface ModuleConfig {
   /** Override contract output */
   contract?: {
     output?: string;
+    /** Path to custom Handlebars template for service interface generation */
+    serviceTemplate?: string;
   };
 
   /** Override public contract output */
@@ -383,6 +387,8 @@ export interface ResolvedModuleConfig {
   contractOutput: string;
   /** Public contract output directory */
   contractPublicOutput: string;
+  /** Custom Handlebars template for service interface generation */
+  serviceTemplate?: string;
   /** Server config (null if disabled) - legacy */
   server: {
     output: string;
@@ -583,6 +589,9 @@ export function resolveModuleConfig(
     `packages/contract-published/${moduleName}`
   );
   
+  // Service template (module overrides defaults)
+  const serviceTemplate = moduleConfig.contract?.serviceTemplate ?? defaults.contract?.serviceTemplate;
+  
   // Server config (legacy)
   const serverEnabled = moduleConfig.server?.enabled !== false;
   const server = serverEnabled ? {
@@ -664,6 +673,7 @@ export function resolveModuleConfig(
     openapi: moduleConfig.openapi,
     contractOutput,
     contractPublicOutput,
+    serviceTemplate,
     server: serverWithTemplate,
     frontend: frontendWithTemplate,
     docs,
@@ -723,6 +733,12 @@ export interface ServiceMethodInfo {
   responseType?: string;
   /** Params type (path + query combined) */
   paramsType?: string;
+  /** All parameters (path, query, header) from the operation */
+  parameters: ParameterObject[];
+  /** Request body schema name (if exists) */
+  requestBodySchema?: string;
+  /** All x-* extension properties from the operation */
+  extensions: Record<string, unknown>;
 }
 
 // Lint result

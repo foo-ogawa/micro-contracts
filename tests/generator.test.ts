@@ -555,6 +555,249 @@ components:
       const frontendPath = path.join(tmpDir, 'frontend/src/core/api.generated.ts');
       expect(fs.existsSync(frontendPath)).toBe(false);
     });
+
+    it('should use custom service template when serviceTemplate is specified', async () => {
+      const specPath = path.join(tmpDir, 'spec.yaml');
+      fs.writeFileSync(specPath, `
+openapi: 3.0.3
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /api/ai/chat/stream:
+    post:
+      operationId: postAiChatStream
+      x-micro-contracts-service: Stream
+      x-micro-contracts-method: postAiChatStream
+      x-micro-contracts-sse: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatStreamRequest'
+      responses:
+        '204':
+          description: SSE stream
+  /api/users:
+    get:
+      operationId: getUsers
+      x-micro-contracts-service: User
+      x-micro-contracts-method: getUsers
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+components:
+  schemas:
+    ChatStreamRequest:
+      type: object
+      properties:
+        message:
+          type: string
+    UserList:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            type: object
+`);
+
+      const templatePath = path.join(tmpDir, 'service-interface-custom.hbs');
+      fs.writeFileSync(templatePath, `/**
+ * {{serviceName}} Service API Interface
+ * Auto-generated from custom template
+ * DO NOT EDIT MANUALLY
+ */
+
+import type {
+{{#each imports}}
+  {{this}},
+{{/each}}
+} from '../schemas/types.js';
+
+export interface {{interfaceName}} {
+{{#each methods}}
+{{#if extensions.x-micro-contracts-sse}}
+  {{name}}(input: {{inputType}}, req: FastifyRequest, reply: FastifyReply): Promise<void>;
+{{else}}
+  {{name}}(input: {{inputType}}): {{returnTypeStr}};
+{{/if}}
+{{/each}}
+}
+`);
+
+      const config: MultiModuleConfig = {
+        defaults: {
+          contract: {
+            output: path.join(tmpDir, 'packages/contract/{module}'),
+            serviceTemplate: templatePath,
+          },
+          contractPublic: { output: path.join(tmpDir, 'packages/contract-published/{module}') },
+        },
+        modules: {
+          aiChat: {
+            openapi: specPath,
+          },
+        },
+      };
+
+      await generate(config, { skipLint: true, contractsOnly: true });
+
+      // Stream service should use custom template with SSE extension
+      const streamServicePath = path.join(tmpDir, 'packages/contract/aiChat/services/StreamServiceApi.ts');
+      expect(fs.existsSync(streamServicePath)).toBe(true);
+      const streamContent = fs.readFileSync(streamServicePath, 'utf-8');
+      expect(streamContent).toContain('custom template');
+      expect(streamContent).toContain('StreamServiceApi');
+      expect(streamContent).toContain('FastifyRequest');
+      expect(streamContent).toContain('FastifyReply');
+      expect(streamContent).toContain('postAiChatStream(input: Stream_postAiChatStreamInput, req: FastifyRequest, reply: FastifyReply): Promise<void>;');
+
+      // User service should use the else branch (no SSE)
+      const userServicePath = path.join(tmpDir, 'packages/contract/aiChat/services/UserServiceApi.ts');
+      expect(fs.existsSync(userServicePath)).toBe(true);
+      const userContent = fs.readFileSync(userServicePath, 'utf-8');
+      expect(userContent).toContain('UserServiceApi');
+      expect(userContent).toContain('getUsers(input: User_getUsersInput): Promise<UserList>;');
+      expect(userContent).not.toContain('FastifyRequest');
+
+      // Index should still be generated (hardcoded, not from template)
+      const indexPath = path.join(tmpDir, 'packages/contract/aiChat/services/index.ts');
+      expect(fs.existsSync(indexPath)).toBe(true);
+      const indexContent = fs.readFileSync(indexPath, 'utf-8');
+      expect(indexContent).toContain('StreamServiceApi');
+      expect(indexContent).toContain('UserServiceApi');
+      expect(indexContent).toContain('ServiceRegistry');
+    });
+
+    it('should fall back to hardcoded generation when serviceTemplate is not specified', async () => {
+      const specPath = path.join(tmpDir, 'spec.yaml');
+      fs.writeFileSync(specPath, `
+openapi: 3.0.3
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /api/users:
+    get:
+      operationId: getUsers
+      x-micro-contracts-service: User
+      x-micro-contracts-method: getUsers
+      x-micro-contracts-sse: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+components:
+  schemas:
+    UserList:
+      type: object
+`);
+
+      const config: MultiModuleConfig = {
+        defaults: {
+          contract: { output: path.join(tmpDir, 'packages/contract/{module}') },
+          contractPublic: { output: path.join(tmpDir, 'packages/contract-published/{module}') },
+        },
+        modules: {
+          core: {
+            openapi: specPath,
+          },
+        },
+      };
+
+      await generate(config, { skipLint: true, contractsOnly: true });
+
+      const servicePath = path.join(tmpDir, 'packages/contract/core/services/UserServiceApi.ts');
+      expect(fs.existsSync(servicePath)).toBe(true);
+      const content = fs.readFileSync(servicePath, 'utf-8');
+      // Should use default hardcoded format (single input argument)
+      expect(content).toContain('getUsers(input: User_getUsersInput): Promise<UserList>;');
+      // Should NOT contain any framework-specific types (FastifyRequest etc.)
+      expect(content).not.toContain('FastifyRequest');
+    });
+
+    it('should pass extensions to custom service template', async () => {
+      const specPath = path.join(tmpDir, 'spec.yaml');
+      fs.writeFileSync(specPath, `
+openapi: 3.0.3
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /api/items:
+    get:
+      operationId: getItems
+      x-micro-contracts-service: Item
+      x-micro-contracts-method: getItems
+      x-custom-cache: true
+      x-custom-timeout: 5000
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemList'
+components:
+  schemas:
+    ItemList:
+      type: object
+`);
+
+      const templatePath = path.join(tmpDir, 'service-ext-test.hbs');
+      fs.writeFileSync(templatePath, `import type {
+{{#each imports}}
+  {{this}},
+{{/each}}
+} from '../schemas/types.js';
+
+export interface {{interfaceName}} {
+{{#each methods}}
+  // cache={{extensions.x-custom-cache}} timeout={{extensions.x-custom-timeout}} params={{parameters.length}}
+  {{name}}(input: {{inputType}}): {{returnTypeStr}};
+{{/each}}
+}
+`);
+
+      const config: MultiModuleConfig = {
+        defaults: {
+          contract: {
+            output: path.join(tmpDir, 'packages/contract/{module}'),
+            serviceTemplate: templatePath,
+          },
+          contractPublic: { output: path.join(tmpDir, 'packages/contract-published/{module}') },
+        },
+        modules: {
+          core: {
+            openapi: specPath,
+          },
+        },
+      };
+
+      await generate(config, { skipLint: true, contractsOnly: true });
+
+      const servicePath = path.join(tmpDir, 'packages/contract/core/services/ItemServiceApi.ts');
+      expect(fs.existsSync(servicePath)).toBe(true);
+      const content = fs.readFileSync(servicePath, 'utf-8');
+      expect(content).toContain('cache=true');
+      expect(content).toContain('timeout=5000');
+      expect(content).toContain('params=1');
+    });
   });
 });
 

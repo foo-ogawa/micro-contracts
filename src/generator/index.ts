@@ -350,7 +350,10 @@ async function generateContractPackage(
   
   // Generate service interfaces
   console.log(`  Generating service interfaces...`);
-  const serviceInterfaces = generateServiceInterfaces(targetSpec, { publicOnly });
+  const serviceInterfaces = generateServiceInterfaces(targetSpec, {
+    publicOnly,
+    serviceTemplate: config.serviceTemplate,
+  });
   for (const [name, content] of serviceInterfaces) {
     const fileName = name === 'index' ? 'index.ts' : `${name}ServiceApi.ts`;
     const filePath = path.join(outputDir, 'services', fileName);
