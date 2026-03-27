@@ -198,6 +198,15 @@ function applyAction(
           changes.push(`+${statusCode}`);
         }
       }
+
+      for (const [key, value] of Object.entries(update)) {
+        if (key === 'parameters' || key === 'responses') continue;
+        const rebasedValue = rebaseRefs(value, overlayDir, targetDir);
+        const collisionKey = `${apiPath}:${method}:${key}`;
+        checkCollision(collisionKey, rebasedValue, overlayFile, collision, injectedKeys);
+        (operation as unknown as Record<string, unknown>)[key] = rebasedValue;
+        changes.push(`+${key}`);
+      }
     }
 
     if (remove) {

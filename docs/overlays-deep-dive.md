@@ -62,7 +62,7 @@ paths:
 
 ### 2. Define Overlay
 
-Create an overlay file that injects parameters and responses based on markers:
+Create an overlay file that injects parameters, responses, and extension properties based on markers:
 
 ```yaml
 # spec/_shared/overlays/middleware.overlay.yaml
@@ -119,7 +119,17 @@ actions:
             Retry-After:
               schema: { type: integer }
               description: Seconds until rate limit resets
+
+  # accessLogging: Inject extension property into operations
+  - target: "$.paths[*][*][?(@.x-middleware contains 'accessLogging')]"
+    x-micro-contracts-overlay-name: accessLogging
+    update:
+      x-access-logging:
+        enabled: true
+        level: detailed
 ```
+
+> **Extension properties in `update`**: Any property in `update` beyond `parameters` and `responses` (e.g., `x-access-logging`) is merged directly into the matching operation. This allows overlays to inject arbitrary extension properties for use by templates or runtime code.
 
 > **📦 Full example**: See [`examples/spec/_shared/overlays/middleware.overlay.yaml`](../examples/spec/_shared/overlays/middleware.overlay.yaml)
 
@@ -271,6 +281,8 @@ micro-contracts uses a restricted JSONPath dialect for reliable parsing:
 | **OpenAPI (source)** | Business responses (200, 201, 204) |
 | **OpenAPI (source)** | Extension markers (`x-middleware: [requireAuth]`) |
 | **Overlay** | Cross-cutting responses (400, 401, 403, 429) |
+| **Overlay** | Cross-cutting parameters (Authorization, X-Tenant-Id) |
+| **Overlay** | Extension properties (`x-access-logging`, etc.) |
 
 **Anti-pattern**: Don't manually add `401` to operations that have `x-middleware: [requireAuth]`. Let the overlay inject it.
 
@@ -280,7 +292,7 @@ micro-contracts uses a restricted JSONPath dialect for reliable parsing:
 
 | What | Generated | Notes |
 |------|-----------|-------|
-| Overlay application | ✅ Yes | Transform OpenAPI (inject params/responses) |
+| Overlay application | ✅ Yes | Transform OpenAPI (inject params/responses/extensions) |
 | Overlay interfaces | ✅ Yes | HTTP-agnostic (`OverlayRegistry`, `*OverlayInput`) |
 | Contract types | ✅ Yes | Types from OpenAPI schemas |
 | Route wiring | ✅ Via template | Template decides how to wire |

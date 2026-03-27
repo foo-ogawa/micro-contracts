@@ -250,6 +250,71 @@ actions:
       fs.rmdirSync(tmpDir);
     });
 
+    it('should apply arbitrary update properties beyond parameters and responses', () => {
+      const mockOverlay = `
+overlay: 1.0.0
+info:
+  title: Access Logging Overlay
+  version: 1.0.0
+actions:
+  - target: "$.paths[*][*][?(@.x-middleware contains 'accessLogging')]"
+    update:
+      x-access-logging:
+        enabled: true
+        level: detailed
+      parameters:
+        - name: X-Request-Id
+          in: header
+          schema:
+            type: string
+      responses:
+        '500':
+          description: Internal Server Error
+`;
+      
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
+      
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'overlay-test-'));
+      const overlayPath = path.join(tmpDir, 'test.overlay.yaml');
+      fs.writeFileSync(overlayPath, mockOverlay);
+
+      // Add accessLogging to an operation
+      (baseSpec.paths['/api/users'].get as any)['x-middleware'] = ['accessLogging'];
+
+      const config: OverlayConfig = {
+        collision: 'error',
+        files: [overlayPath],
+      };
+
+      const result = processOverlays(baseSpec, config);
+
+      const op = result.spec.paths['/api/users'].get as any;
+
+      // x-access-logging should be merged into the operation
+      expect(op['x-access-logging']).toEqual({ enabled: true, level: 'detailed' });
+
+      // parameters and responses should also work as before
+      expect(op.parameters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'X-Request-Id', in: 'header' }),
+        ])
+      );
+      expect(op.responses['500']).toBeDefined();
+
+      // Non-matching operation should NOT have x-access-logging
+      expect((result.spec.paths['/api/admin/stats'].get as any)['x-access-logging']).toBeUndefined();
+
+      // Log should record the extension property change
+      const log = result.log.find(l => l.path === '/api/users' && l.method === 'get');
+      expect(log?.changes).toContain('+x-access-logging');
+
+      // Cleanup
+      fs.unlinkSync(overlayPath);
+      fs.rmdirSync(tmpDir);
+    });
+
     it('should log applied overlays', () => {
       const mockOverlay = `
 overlay: 1.0.0

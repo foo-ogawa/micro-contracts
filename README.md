@@ -38,7 +38,7 @@ The core architecture is organized along two axes:
 | **Modular monolith → microservices** | Same contracts work in monolith or split services; dependency tracking prevents hidden coupling |
 | **Multiple teams sharing OpenAPI** | Explicit module dependencies make cross-team impact visible |
 | **Published API with compatibility SLA** | `contract-published` extraction + `x-micro-contracts-non-exportable` fail-fast prevents accidental exposure |
-| **Cross-cutting concerns at scale** | OpenAPI Overlays inject auth/rate-limit/tenancy without copy-paste |
+| **Cross-cutting concerns at scale** | OpenAPI Overlays inject auth/rate-limit/tenancy and extension properties without copy-paste |
 
 **Not the best fit for:** Single-developer projects, auto-generated UI from schema, multi-language SDK generation (use OpenAPI Generator instead).
 
