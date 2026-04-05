@@ -617,10 +617,10 @@ Handlebars.registerHelper('uppercase', (str) => str?.toUpperCase());
 Handlebars.registerHelper('lowercase', (str) => str?.toLowerCase());
 Handlebars.registerHelper('capitalize', (str) => str?.charAt(0).toUpperCase() + str?.slice(1));
 Handlebars.registerHelper('camelCase', (str: string) => {
-  return str?.replace(/-([a-z])/g, (_match: string, c: string) => c.toUpperCase());
+  return str?.replace(/[-_]([a-z])/g, (_match: string, c: string) => c.toUpperCase());
 });
 Handlebars.registerHelper('pascalCase', (str: string) => {
-  const camel = str?.replace(/-([a-z])/g, (_match: string, c: string) => c.toUpperCase());
+  const camel = str?.replace(/[-_]([a-z])/g, (_match: string, c: string) => c.toUpperCase());
   return camel?.charAt(0).toUpperCase() + camel?.slice(1);
 });
 Handlebars.registerHelper('kebabCase', (str) => {
@@ -628,6 +628,11 @@ Handlebars.registerHelper('kebabCase', (str) => {
 });
 Handlebars.registerHelper('snakeCase', (str: string) => {
   return str?.replace(/([a-z])([A-Z])/g, '$1_$2').replace(/-/g, '_').toLowerCase();
+});
+
+// Ref helper
+Handlebars.registerHelper('refName', (ref: string) => {
+  return typeof ref === 'string' ? ref.split('/').pop() : '';
 });
 
 // JSON helper

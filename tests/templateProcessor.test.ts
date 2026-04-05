@@ -226,6 +226,13 @@ describe('templateProcessor', () => {
     it('should have camelCase helper', () => {
       const template = Handlebars.compile('{{camelCase name}}');
       expect(template({ name: 'x-middleware' })).toBe('xMiddleware');
+      expect(template({ name: 'balance_sheet' })).toBe('balanceSheet');
+    });
+
+    it('should have pascalCase helper', () => {
+      const template = Handlebars.compile('{{pascalCase name}}');
+      expect(template({ name: 'x-middleware' })).toBe('XMiddleware');
+      expect(template({ name: 'balance_sheet' })).toBe('BalanceSheet');
     });
 
     it('should have snakeCase helper', () => {
@@ -233,6 +240,13 @@ describe('templateProcessor', () => {
       expect(template({ name: 'getUserById' })).toBe('get_user_by_id');
       expect(template({ name: 'x-middleware' })).toBe('x_middleware');
       expect(template({ name: 'UserService' })).toBe('user_service');
+    });
+
+    it('should have refName helper', () => {
+      const template = Handlebars.compile('{{refName ref}}');
+      expect(template({ ref: '#/components/schemas/LoadStatus' })).toBe('LoadStatus');
+      expect(template({ ref: '#/components/schemas/User' })).toBe('User');
+      expect(template({ ref: '' })).toBe('');
     });
 
     it('should have join helper', () => {
