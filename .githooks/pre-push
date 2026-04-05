@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔍 pre-push: checking examples drift..."
+
+npm run build --silent
+
+(cd examples && npm run generate --silent)
+
+if ! git diff --quiet examples/; then
+  echo ""
+  echo "❌ examples/ has uncommitted changes after regeneration."
+  echo "   Run: npm run build && (cd examples && npm run generate)"
+  echo "   Then commit the changes before pushing."
+  echo ""
+  git diff --stat examples/
+  exit 1
+fi
+
+echo "✅ pre-push: examples drift check passed."
