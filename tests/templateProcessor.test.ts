@@ -228,6 +228,13 @@ describe('templateProcessor', () => {
       expect(template({ name: 'x-middleware' })).toBe('xMiddleware');
     });
 
+    it('should have snakeCase helper', () => {
+      const template = Handlebars.compile('{{snakeCase name}}');
+      expect(template({ name: 'getUserById' })).toBe('get_user_by_id');
+      expect(template({ name: 'x-middleware' })).toBe('x_middleware');
+      expect(template({ name: 'UserService' })).toBe('user_service');
+    });
+
     it('should have join helper', () => {
       const template = Handlebars.compile('{{join items ", "}}');
       expect(template({ items: ['a', 'b', 'c'] })).toBe('a, b, c');

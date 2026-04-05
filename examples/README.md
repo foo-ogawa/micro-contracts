@@ -181,7 +181,7 @@ The following variables are available in templates:
 - `{{contractPackage}}` - Path to contract package
 - `{{domainsPath}}` - Path to Fastify's domains object
 - `{{extensionInfo}}` - Overlay information
-- Other Handlebars helpers (`uppercase`, `camelCase`, `pascalCase`, `eq`, `if`, `each`, etc.)
+- Other Handlebars helpers (`uppercase`, `camelCase`, `pascalCase`, `kebabCase`, `snakeCase`, `eq`, `if`, `each`, etc.)
 
 ---
 

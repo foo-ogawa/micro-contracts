@@ -626,6 +626,9 @@ Handlebars.registerHelper('pascalCase', (str: string) => {
 Handlebars.registerHelper('kebabCase', (str) => {
   return str?.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 });
+Handlebars.registerHelper('snakeCase', (str: string) => {
+  return str?.replace(/([a-z])([A-Z])/g, '$1_$2').replace(/-/g, '_').toLowerCase();
+});
 
 // JSON helper
 Handlebars.registerHelper('json', (obj) => JSON.stringify(obj, null, 2));
