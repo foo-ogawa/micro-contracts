@@ -82,8 +82,12 @@ export interface ReferenceObject {
   $ref: string;
 }
 
+/** Primitive OpenAPI type names */
+export type OpenAPIType = 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object' | 'null';
+
 export interface SchemaObject {
-  type?: 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object' | 'null';
+  /** OpenAPI 3.0: single type string. OpenAPI 3.1: may be an array (e.g. ['string', 'null']) */
+  type?: OpenAPIType | OpenAPIType[];
   format?: string;
   description?: string;
   enum?: Array<string | number | boolean>;

@@ -9,8 +9,24 @@ import type {
   ParameterObject,
   OperationObject,
   PathItem,
+  OpenAPIType,
 } from '../types.js';
 import { isReference, getRefName } from '../types.js';
+
+/**
+ * Normalize OpenAPI 3.1 type arrays into a non-null type and a nullable flag.
+ * Returns undefined for type if the schema has no type field.
+ */
+function normalizeType(schema: SchemaObject): { types: OpenAPIType[]; nullable: boolean } {
+  const raw = schema.type;
+  if (raw === undefined) {
+    return { types: [], nullable: !!schema.nullable };
+  }
+  const arr = Array.isArray(raw) ? raw : [raw];
+  const hasNull = arr.includes('null');
+  const nonNull = arr.filter((t): t is OpenAPIType => t !== 'null');
+  return { types: nonNull, nullable: hasNull || !!schema.nullable };
+}
 
 /**
  * Generate TypeScript type definitions from OpenAPI spec
@@ -117,8 +133,10 @@ function generateSchemaType(
     return `export type ${name} = ${types};`;
   }
 
+  const { types, nullable } = normalizeType(schema);
+
   // Handle object type
-  if (schema.type === 'object' || schema.properties) {
+  if (types.includes('object') || schema.properties) {
     return generateInterfaceType(name, schema, spec);
   }
 
@@ -127,17 +145,19 @@ function generateSchemaType(
     const enumValues = schema.enum.map(v => 
       typeof v === 'string' ? `'${v}'` : String(v)
     ).join(' | ');
-    return `export type ${name} = ${enumValues};`;
+    const suffix = nullable ? ' | null' : '';
+    return `export type ${name} = ${enumValues}${suffix};`;
   }
 
   // Handle array
-  if (schema.type === 'array' && schema.items) {
+  if (types.includes('array') && schema.items) {
     const itemType = schemaToTypeString(schema.items, spec);
-    return `export type ${name} = ${itemType}[];`;
+    const suffix = nullable ? ' | null' : '';
+    return `export type ${name} = ${itemType}[]${suffix};`;
   }
 
-  // Handle primitive types
-  const tsType = primitiveToTsType(schema);
+  // Handle primitive types (including type arrays like ['string', 'null'])
+  const tsType = resolveTypeString(types, schema, nullable);
   return `export type ${name} = ${tsType};`;
 }
 
@@ -197,21 +217,21 @@ function schemaToTypeString(
     return getRefName(schema.$ref);
   }
 
-  // Handle nullable
-  const nullable = schema.nullable ? ' | null' : '';
+  const { types, nullable } = normalizeType(schema);
+  const nullSuffix = nullable ? ' | null' : '';
 
   // Handle allOf, oneOf, anyOf
   if (schema.allOf) {
-    const types = schema.allOf.map(s => schemaToTypeString(s, spec)).join(' & ');
-    return `(${types})${nullable}`;
+    const ts = schema.allOf.map(s => schemaToTypeString(s, spec)).join(' & ');
+    return `(${ts})${nullSuffix}`;
   }
   if (schema.oneOf) {
-    const types = schema.oneOf.map(s => schemaToTypeString(s, spec)).join(' | ');
-    return `(${types})${nullable}`;
+    const ts = schema.oneOf.map(s => schemaToTypeString(s, spec)).join(' | ');
+    return `(${ts})${nullSuffix}`;
   }
   if (schema.anyOf) {
-    const types = schema.anyOf.map(s => schemaToTypeString(s, spec)).join(' | ');
-    return `(${types})${nullable}`;
+    const ts = schema.anyOf.map(s => schemaToTypeString(s, spec)).join(' | ');
+    return `(${ts})${nullSuffix}`;
   }
 
   // Handle enum
@@ -219,32 +239,30 @@ function schemaToTypeString(
     const enumValues = schema.enum.map(v => 
       typeof v === 'string' ? `'${v}'` : String(v)
     ).join(' | ');
-    return `(${enumValues})${nullable}`;
+    return `(${enumValues})${nullSuffix}`;
   }
 
   // Handle array
-  if (schema.type === 'array' && schema.items) {
+  if (types.includes('array') && schema.items) {
     const itemType = schemaToTypeString(schema.items, spec);
-    // Wrap item type in parentheses if it contains union types
     const wrappedItemType = itemType.includes(' | ') || itemType.includes(' & ') 
       ? `(${itemType})` 
       : itemType;
-    return `${wrappedItemType}[]${nullable}`;
+    return `${wrappedItemType}[]${nullSuffix}`;
   }
 
   // Handle object with inline properties
-  if (schema.type === 'object' || schema.properties) {
+  if (types.includes('object') || schema.properties) {
     if (!schema.properties) {
       if (schema.additionalProperties) {
         if (typeof schema.additionalProperties === 'boolean') {
-          return `Record<string, unknown>${nullable}`;
+          return `Record<string, unknown>${nullSuffix}`;
         }
         const valueType = schemaToTypeString(schema.additionalProperties, spec);
-        return `Record<string, ${valueType}>${nullable}`;
+        return `Record<string, ${valueType}>${nullSuffix}`;
       }
-      return `Record<string, unknown>${nullable}`;
+      return `Record<string, unknown>${nullSuffix}`;
     }
-    // Inline object - generate inline type
     const props: string[] = [];
     const required = new Set(schema.required || []);
     for (const [propName, propSchema] of Object.entries(schema.properties)) {
@@ -253,22 +271,19 @@ function schemaToTypeString(
       const optional = isRequired ? '' : '?';
       props.push(`${propName}${optional}: ${tsType}`);
     }
-    return `{ ${props.join('; ')} }${nullable}`;
+    return `{ ${props.join('; ')} }${nullSuffix}`;
   }
 
-  // Handle primitive types
-  return primitiveToTsType(schema) + nullable;
+  // Handle primitive types (including type arrays like ['string', 'null'])
+  return resolveTypeString(types, schema, nullable);
 }
 
 /**
- * Convert primitive OpenAPI type to TypeScript type
+ * Map a single OpenAPI type name to its TypeScript equivalent
  */
-function primitiveToTsType(schema: SchemaObject): string {
-  switch (schema.type) {
+function singleTypeToTs(typeName: OpenAPIType): string {
+  switch (typeName) {
     case 'string':
-      if (schema.format === 'date' || schema.format === 'date-time') {
-        return 'string'; // Keep as string, not Date
-      }
       return 'string';
     case 'integer':
     case 'number':
@@ -277,9 +292,29 @@ function primitiveToTsType(schema: SchemaObject): string {
       return 'boolean';
     case 'null':
       return 'null';
+    case 'object':
+      return 'Record<string, unknown>';
+    case 'array':
+      return 'unknown[]';
     default:
       return 'unknown';
   }
+}
+
+/**
+ * Resolve an array of OpenAPI types (with nullable flag) into a TypeScript type string.
+ * Handles both single-type and multi-type (OpenAPI 3.1 union) cases.
+ */
+function resolveTypeString(types: OpenAPIType[], schema: SchemaObject, nullable: boolean): string {
+  const nullSuffix = nullable ? ' | null' : '';
+
+  if (types.length === 0) {
+    return `unknown${nullSuffix}`;
+  }
+
+  const tsTypes = types.map(t => singleTypeToTs(t));
+  const unique = [...new Set(tsTypes)];
+  return unique.join(' | ') + nullSuffix;
 }
 
 /**
@@ -343,7 +378,7 @@ function generateOperationTypes(spec: OpenAPISpec): string {
           if (content?.schema) {
             if (isReference(content.schema)) {
               bodyTypeName = getRefName(content.schema.$ref);
-            } else if (content.schema.properties || content.schema.type === 'object') {
+            } else if (content.schema.properties || normalizeType(content.schema).types.includes('object')) {
               // Generate inline body type
               bodyTypeName = `${baseTypeName}Body`;
               if (!generatedTypes.has(bodyTypeName)) {
