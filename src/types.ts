@@ -44,6 +44,7 @@ export interface OperationObject {
   parameters?: ParameterObject[];
   requestBody?: RequestBodyObject | ReferenceObject;
   responses: Record<string, ResponseObject | ReferenceObject>;
+  security?: Array<Record<string, string[]>>;
   // Custom extensions (canonical names)
   'x-micro-contracts-service'?: string;
   'x-micro-contracts-method'?: string;
@@ -53,6 +54,28 @@ export interface OperationObject {
   'x-auth'?: 'required' | 'optional' | 'none';
   'x-authz'?: string[];
   'x-middleware'?: string[];
+  // Screen spec extensions
+  'x-screen-const'?: string;
+  'x-screen-id'?: string;
+  'x-screen-name'?: string;
+  'x-back-navigation'?: boolean;
+  'x-events'?: ScreenEventDefinition[];
+  'x-view-model'?: string;
+  'x-view-props'?: string;
+}
+
+/**
+ * Screen analytics event definition (used in x-events)
+ */
+export interface ScreenEventDefinition {
+  /** Event name (e.g., 'home_view') */
+  name: string;
+  /** Event type (e.g., 'screen_view', 'user_action') */
+  type: string;
+  /** Generated method name (e.g., 'trackView') */
+  method: string;
+  /** Event parameters with their types */
+  params?: Record<string, string>;
 }
 
 export interface ParameterObject {
@@ -72,6 +95,15 @@ export interface RequestBodyObject {
 export interface ResponseObject {
   description: string;
   content?: Record<string, MediaTypeObject>;
+  links?: Record<string, LinkObject>;
+}
+
+/**
+ * OpenAPI Link Object (used for screen navigation targets)
+ */
+export interface LinkObject {
+  operationId?: string;
+  description?: string;
 }
 
 export interface MediaTypeObject {
@@ -275,6 +307,9 @@ export interface ModuleConfig {
   /** Path to OpenAPI spec file (required) */
   openapi: string;
 
+  /** Enable screen spec mode (parses x-screen-* extensions into ScreenContext) */
+  screen?: boolean;
+
   /** Override contract output */
   contract?: {
     output?: string;
@@ -387,6 +422,8 @@ export interface ResolvedModuleConfig {
   name: string;
   /** Path to OpenAPI spec file */
   openapi: string;
+  /** Screen spec mode enabled */
+  screen: boolean;
   /** Contract output directory */
   contractOutput: string;
   /** Public contract output directory */
@@ -675,6 +712,7 @@ export function resolveModuleConfig(
   return {
     name: moduleName,
     openapi: moduleConfig.openapi,
+    screen: moduleConfig.screen === true,
     contractOutput,
     contractPublicOutput,
     serviceTemplate,

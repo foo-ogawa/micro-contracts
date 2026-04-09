@@ -15,6 +15,8 @@ import { isReference, getRefName, hasPrivateProperties, collectReferencedSchemas
 export interface LintOptions {
   /** Treat warnings as errors */
   strict?: boolean;
+  /** Screen spec mode (suppresses x-micro-contracts-service/method warnings) */
+  screen?: boolean;
 }
 
 export interface LintResult {
@@ -38,25 +40,85 @@ export function lintSpec(spec: OpenAPISpec, options: LintOptions = {}): LintResu
       
       const location = `${method.toUpperCase()} ${path}`;
       
-      // Check for x-micro-contracts-service and x-micro-contracts-method
-      if (!operation['x-micro-contracts-service']) {
-        warnings.push({
-          type: 'warning',
-          code: 'MISSING_X_SERVICE',
-          message: `Missing x-micro-contracts-service extension`,
-          path,
-          location,
-        });
+      // In screen mode, skip x-micro-contracts-service/method warnings
+      if (!options.screen) {
+        if (!operation['x-micro-contracts-service']) {
+          warnings.push({
+            type: 'warning',
+            code: 'MISSING_X_SERVICE',
+            message: `Missing x-micro-contracts-service extension`,
+            path,
+            location,
+          });
+        }
+        
+        if (!operation['x-micro-contracts-method']) {
+          warnings.push({
+            type: 'warning',
+            code: 'MISSING_X_METHOD',
+            message: `Missing x-micro-contracts-method extension`,
+            path,
+            location,
+          });
+        }
       }
       
-      if (!operation['x-micro-contracts-method']) {
-        warnings.push({
-          type: 'warning',
-          code: 'MISSING_X_METHOD',
-          message: `Missing x-micro-contracts-method extension`,
-          path,
-          location,
-        });
+      // Screen spec consistency: if x-screen-id is present, require x-screen-const and x-screen-name
+      if (operation['x-screen-id']) {
+        if (!operation['x-screen-const']) {
+          errors.push({
+            type: 'error',
+            code: 'SCREEN_MISSING_CONST',
+            message: `Operation has x-screen-id but missing x-screen-const`,
+            path,
+            location,
+          });
+        }
+        if (!operation['x-screen-name']) {
+          errors.push({
+            type: 'error',
+            code: 'SCREEN_MISSING_NAME',
+            message: `Operation has x-screen-id but missing x-screen-name`,
+            path,
+            location,
+          });
+        }
+        if (!operation.operationId) {
+          errors.push({
+            type: 'error',
+            code: 'SCREEN_MISSING_OPERATION_ID',
+            message: `Screen operation requires operationId`,
+            path,
+            location,
+          });
+        }
+      }
+      
+      // Validate x-events structure
+      if (operation['x-events']) {
+        const events = operation['x-events'];
+        if (!Array.isArray(events)) {
+          errors.push({
+            type: 'error',
+            code: 'SCREEN_INVALID_EVENTS',
+            message: `x-events must be an array`,
+            path,
+            location,
+          });
+        } else {
+          for (let i = 0; i < events.length; i++) {
+            const event = events[i];
+            if (!event.name || !event.type || !event.method) {
+              errors.push({
+                type: 'error',
+                code: 'SCREEN_INVALID_EVENT',
+                message: `x-events[${i}] must have name, type, and method`,
+                path,
+                location,
+              });
+            }
+          }
+        }
       }
       
       // Check public endpoints for private schema references

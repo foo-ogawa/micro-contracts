@@ -14,7 +14,7 @@ import yaml from 'yaml';
 import { generate, loadConfig, loadOpenAPISpec, lintSpec, formatLintResults, computeInputHash } from './generator/index.js';
 import type { GeneratorConfig, MultiModuleConfig } from './types.js';
 import { isMultiModuleConfig } from './types.js';
-import { getStarterTemplates } from './cli/templates.js';
+import { getStarterTemplates, getScreenStarterTemplates } from './cli/templates.js';
 import {
   runAllChecks,
   formatCheckResults,
@@ -177,8 +177,9 @@ program
   .option('-i, --openapi <path>', 'OpenAPI spec to process (auto-adds x-micro-contracts-service/method)')
   .option('-o, --output <path>', 'Output path for processed OpenAPI')
   .option('--skip-templates', 'Skip creating starter templates')
+  .option('--screens', 'Initialize as screen spec module (generates screen templates and starter spec)')
   .action(async (name, options) => {
-    console.log(`Initializing module "${name}"...\n`);
+    console.log(`Initializing module "${name}"${options.screens ? ' (screen spec)' : ''}...\n`);
     
     // Create spec directory structure
     const specDirs = [
@@ -206,6 +207,18 @@ program
           console.log(`Created: ${templatePath}`);
         }
       }
+      
+      // Also create screen templates when --screens is specified
+      if (options.screens) {
+        const screenTemplates = getScreenStarterTemplates();
+        for (const [filename, content] of Object.entries(screenTemplates)) {
+          const templatePath = path.join('spec/default/templates', filename);
+          if (!fs.existsSync(templatePath)) {
+            fs.writeFileSync(templatePath, content);
+            console.log(`Created: ${templatePath}`);
+          }
+        }
+      }
     }
     
     // Create shared schemas
@@ -220,6 +233,17 @@ program
     if (!fs.existsSync(spectralPath)) {
       fs.writeFileSync(spectralPath, generateSpectralRules());
       console.log(`Created: ${spectralPath}`);
+    }
+    
+    // Create starter screen spec YAML when --screens is specified
+    if (options.screens) {
+      const screenSpecDir = `spec/${name}/openapi`;
+      fs.mkdirSync(screenSpecDir, { recursive: true });
+      const screenSpecPath = path.join(screenSpecDir, `${name}.yaml`);
+      if (!fs.existsSync(screenSpecPath)) {
+        fs.writeFileSync(screenSpecPath, generateScreenSpecTemplate(name));
+        console.log(`Created: ${screenSpecPath}`);
+      }
     }
     
     // Create server/frontend directories
@@ -255,7 +279,10 @@ program
     // Create config template if not exists
     const configPath = path.resolve('micro-contracts.config.yaml');
     if (!fs.existsSync(configPath)) {
-      fs.writeFileSync(configPath, generateConfigTemplate(name));
+      const configContent = options.screens
+        ? generateScreenConfigTemplate(name)
+        : generateConfigTemplate(name);
+      fs.writeFileSync(configPath, configContent);
       console.log(`Created: ${configPath}`);
     }
     
@@ -287,7 +314,13 @@ program
     
     console.log(`\nModule "${name}" initialized!`);
     
-    if (!options.openapi) {
+    if (options.screens) {
+      console.log(`\nNext steps:`);
+      console.log(`  1. Edit spec/${name}/openapi/${name}.yaml with your screen definitions`);
+      console.log(`  2. Define ViewModels in components/schemas`);
+      console.log(`  3. Add navigation links and x-events`);
+      console.log(`  4. Run: npx micro-contracts generate`);
+    } else if (!options.openapi) {
       console.log(`\nNext steps:`);
       console.log(`  1. Create spec/${name}/openapi/${name}.yaml with your API spec`);
       console.log(`  2. Add x-micro-contracts-service and x-micro-contracts-method to operations`);
@@ -1506,6 +1539,120 @@ function outputAllDependencies(moduleDeps: Map<string, { deps: string[] }>): voi
     }
     console.log();
   }
+}
+
+/**
+ * Generate starter screen spec YAML
+ */
+function generateScreenSpecTemplate(moduleName: string): string {
+  const pascalName = moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
+  return `openapi: '3.1.0'
+info:
+  title: ${pascalName} Screen Specification
+  version: '0.1.0'
+  description: |
+    Screen contract for ${moduleName} domain. This is a screen specification, not a server API.
+    Defines ViewModels, navigation links, and analytics events per screen.
+servers:
+  - url: /
+    description: Screen routes (client-side)
+paths:
+  /home:
+    get:
+      operationId: renderHomePage
+      security: [{session: []}]
+      x-screen-const: HOME
+      x-screen-id: SCR-001
+      x-screen-name: HomePage
+      x-back-navigation: false
+      x-events:
+        - name: home_view
+          type: screen_view
+          method: trackView
+      summary: Render home page
+      responses:
+        '200':
+          description: Home page ViewModel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomePageViewModel'
+          links:
+            goToSettings:
+              operationId: renderSettingsPage
+  /settings:
+    get:
+      operationId: renderSettingsPage
+      security: [{session: []}]
+      x-screen-const: SETTINGS
+      x-screen-id: SCR-002
+      x-screen-name: SettingsPage
+      x-back-navigation: true
+      x-events:
+        - name: settings_view
+          type: screen_view
+          method: trackView
+      summary: Render settings page
+      responses:
+        '200':
+          description: Settings page ViewModel
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsPageViewModel'
+          links:
+            goToHome:
+              operationId: renderHomePage
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: session
+  schemas:
+    HomePageViewModel:
+      type: object
+      required: [greeting]
+      properties:
+        greeting:
+          type: string
+    SettingsPageViewModel:
+      type: object
+      required: [theme]
+      properties:
+        theme:
+          type: string
+          enum: [light, dark]
+`;
+}
+
+/**
+ * Generate config template for screen module
+ */
+function generateScreenConfigTemplate(moduleName: string): string {
+  return [
+    '# micro-contracts Configuration (Screen Spec)',
+    '',
+    'defaults:',
+    '  contract:',
+    '    output: packages/contract/{module}',
+    '',
+    '  docs:',
+    '    enabled: false',
+    '',
+    'modules:',
+    `  ${moduleName}:`,
+    `    openapi: spec/${moduleName}/openapi/${moduleName}.yaml`,
+    '    screen: true',
+    '    outputs:',
+    '      screen-navigation:',
+    `        output: frontend/src/screens/navigation.generated.ts`,
+    '        template: screen-navigation.hbs',
+    '      screen-events:',
+    `        output: frontend/src/screens/events.generated.ts`,
+    '        template: screen-events.hbs',
+    '',
+  ].join('\n');
 }
 
 // Starter templates are imported from ./cli/templates.js

@@ -45,6 +45,7 @@ export { generateServiceInterfaces } from './serviceGenerator.js';
 export { lintSpec, formatLintResults } from './linter.js';
 export { processOverlays, generateExtensionInterfaces } from './overlayProcessor.js';
 export { buildTemplateContext, generateWithTemplate } from './templateProcessor.js';
+export type { ScreenContext, ScreenLink, TemplateContext } from './templateProcessor.js';
 export { collectInputFiles, computeInputHash } from './inputHash.js';
 
 /**
@@ -208,7 +209,7 @@ async function generateModule(
   // Run linting first (unless skipped)
   if (!options.skipLint) {
     console.log('\nLinting OpenAPI spec...');
-    const lintResult = lintSpec(spec);
+    const lintResult = lintSpec(spec, { screen: config.screen });
     console.log(formatLintResults(lintResult));
     
     if (!lintResult.valid) {
@@ -491,6 +492,7 @@ async function generateFromOutputs(
         contractPackage: expandPlaceholder(output.config?.contractPackage as string | undefined, `@project/contract/${config.name}`),
         extensionInfo: overlayResult?.extensionInfo,
         appliedOverlays: overlayResult?.appliedOverlays,
+        screen: config.screen,
       });
       
       // Add output-specific config to context
@@ -664,6 +666,7 @@ async function generateServerRoutes(
     contractPackage: `@project/contract/${config.name}`,
     extensionInfo: overlayResult?.extensionInfo,
     appliedOverlays: overlayResult?.appliedOverlays,
+    screen: config.screen,
   });
   const routesContent = generateWithTemplate(
     config.server.template,
@@ -700,6 +703,7 @@ async function generateFrontendClient(
     contractPackage: `@project/contract/${config.name}`,
     extensionInfo: overlayResult?.extensionInfo,
     appliedOverlays: overlayResult?.appliedOverlays,
+    screen: config.screen,
   });
   const clientContent = generateWithTemplate(
     config.frontend.template,

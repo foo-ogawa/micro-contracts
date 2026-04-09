@@ -368,6 +368,68 @@ export const overlayHandlers: OverlayRegistry = {
 };
 `;
 
+// =============================================================================
+// Screen Spec Templates
+// =============================================================================
+
+export const STARTER_SCREEN_NAVIGATION_TEMPLATE = `/**
+ * Auto-generated screen navigation map from OpenAPI screen specification
+ * Generated from: {{title}} v{{version}}
+ * DO NOT EDIT MANUALLY
+ */
+
+const _OP_ROUTES = {
+{{#each screens}}
+  {{operationId}}: '{{route}}',
+{{/each}}
+} as const;
+
+export const SCREENS = {
+{{#each screens}}
+  {{screenConst}}: { id: '{{screenId}}' as const, route: _OP_ROUTES.{{operationId}}, supportsBack: {{supportsBack}} } as const,
+{{/each}}
+} as const;
+
+{{#each screens}}
+{{#if links.length}}
+export const {{screenConst}}_PAGE_LINKS = {
+{{#each links}}
+  {{name}}: _OP_ROUTES.{{targetOperationId}},
+{{/each}}
+} as const;
+
+{{/if}}
+{{/each}}
+`;
+
+export const STARTER_SCREEN_EVENTS_TEMPLATE = `/**
+ * Auto-generated analytics event hooks from OpenAPI screen specification
+ * Generated from: {{title}} v{{version}}
+ * DO NOT EDIT MANUALLY
+ */
+
+import { trackEvent } from '@/lib/analytics';
+
+{{#each screens}}
+{{#if events.length}}
+export function use{{screenName}}Events() {
+  return {
+{{#each events}}
+{{#if this.params}}
+    {{this.method}}: ({{#each this.params}}{{@key}}: {{#if (eq this 'integer')}}number{{else}}{{this}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}) =>
+      trackEvent('{{this.name}}', '{{this.type}}', { {{#each this.params}}{{@key}}{{#unless @last}}, {{/unless}}{{/each}} }),
+{{else}}
+    {{this.method}}: () =>
+      trackEvent('{{this.name}}', '{{this.type}}', {}),
+{{/if}}
+{{/each}}
+  };
+}
+
+{{/if}}
+{{/each}}
+`;
+
 /**
  * Get all starter templates
  */
@@ -378,5 +440,15 @@ export function getStarterTemplates(): Record<string, string> {
     'service-stubs.hbs': STARTER_SERVICE_STUBS_TEMPLATE,
     'overlay-adapter.hbs': STARTER_OVERLAY_ADAPTER_TEMPLATE,
     'overlay-stubs.hbs': STARTER_OVERLAY_STUBS_TEMPLATE,
+  };
+}
+
+/**
+ * Get screen spec starter templates
+ */
+export function getScreenStarterTemplates(): Record<string, string> {
+  return {
+    'screen-navigation.hbs': STARTER_SCREEN_NAVIGATION_TEMPLATE,
+    'screen-events.hbs': STARTER_SCREEN_EVENTS_TEMPLATE,
   };
 }

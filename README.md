@@ -28,6 +28,7 @@ The core architecture is organized along two axes:
 | 3 | **Enforceable Guardrails** | Built-in checks prevent bypassing contract-first workflow—blocks direct edits to generated files, detects drift, verifies security declarations. See **[Guardrails](docs/development-guardrails.md)**. |
 | 4 | **Public Surface Governance** | `contract-published` is extracted (not duplicated) from the master contract. `x-micro-contracts-non-exportable` fails generation if internal data leaks. |
 | 5 | **Explicit Module Dependencies** | `x-micro-contracts-depend-on` declares cross-module dependencies. `deps/` re-exports only declared types; enables impact analysis. |
+| 6 | **Screen Spec** | Declare frontend screen contracts (ViewModel, navigation, analytics events) in OpenAPI. One YAML drives typed navigation maps and event hooks. See **[Screen Spec](docs/screen-spec.md)**. |
 
 ---
 
@@ -114,6 +115,41 @@ A monolith may have multiple modules in one service. Start with multiple modules
 
 > **📖 Deep Dive**: See **[OpenAPI Overlays (Deep Dive)](docs/overlays-deep-dive.md)** for complete examples and configuration.
 
+### Screen Spec — Frontend Screen Contracts
+
+Standard OpenAPI constructs can also define **frontend screen contracts** — bridging the API layer and UI components. A single YAML file drives ViewModel types, typed navigation maps, and analytics event hooks.
+
+```
+Screen Spec (OpenAPI YAML)
+  ├── ViewModel Types       (from schemas — zero new template work)
+  ├── Navigation Map        (from response links → typed routing)
+  └── Event Hooks           (from x-events → typed analytics)
+```
+
+Enable with `screen: true` in module config:
+
+```yaml
+modules:
+  myScreens:
+    openapi: spec/screens/screens.yaml
+    screen: true
+    outputs:
+      screen-navigation:
+        output: frontend/src/screens/navigation.generated.ts
+        template: screen-navigation.hbs
+      screen-events:
+        output: frontend/src/screens/events.generated.ts
+        template: screen-events.hbs
+```
+
+Initialize a screen module with starter files:
+
+```bash
+npx micro-contracts init myScreens --screens
+```
+
+> **📖 Deep Dive**: See **[Screen Spec](docs/screen-spec.md)** for the full guide — YAML structure, `x-screen-*` extensions, `TemplateContext.screens`, lint rules, and custom template examples.
+
 ---
 
 ## Directory Structure
@@ -170,6 +206,18 @@ project/
 | `x-micro-contracts-published` | boolean | Include in `contract-published` (compatibility SLA) |
 | `x-micro-contracts-non-exportable` | boolean | Mark as non-exportable (fails if used in published endpoints) |
 | `x-micro-contracts-depend-on` | string[] | Explicit dependencies on other modules' published APIs |
+
+### Screen Spec Extensions
+
+Used in modules with `screen: true`. See **[Screen Spec](docs/screen-spec.md)** for details.
+
+| Extension | Type | Description |
+|-----------|------|-------------|
+| `x-screen-const` | string | Stable constant name (e.g., `HOME`) |
+| `x-screen-id` | string | Traceability ID (e.g., `SCR-001`) |
+| `x-screen-name` | string | Generated symbol name (e.g., `HomePage`) |
+| `x-back-navigation` | boolean | Supports history-based back navigation |
+| `x-events` | array | Analytics event declarations (`{name, type, method, params?}`) |
 
 ### Example
 
@@ -243,6 +291,7 @@ Create `micro-contracts.config.yaml`. All paths support `{module}` placeholder.
 | Key | Type | Required | Description |
 |-----|------|----------|-------------|
 | `openapi` | string | yes | Path to OpenAPI spec file |
+| `screen` | boolean | no | Enable screen spec mode (`x-screen-*` extensions, `TemplateContext.screens`) |
 | `contract.output` | string | no | Override contract output directory |
 | `contract.serviceTemplate` | string | no | Override custom service interface template |
 | `contractPublic.output` | string | no | Override public contract output directory |
@@ -316,6 +365,7 @@ Initialize a new module structure with starter templates.
 | `-i, --openapi <path>` | OpenAPI spec to process (auto-adds extensions) |
 | `-o, --output <path>` | Output path for processed OpenAPI |
 | `--skip-templates` | Skip creating starter templates |
+| `--screens` | Initialize as screen spec module (generates screen templates and starter spec) |
 
 ### lint \<input\>
 
@@ -431,6 +481,7 @@ export class UserService implements UserServiceApi {
 | Document | Description |
 |----------|-------------|
 | **[Examples](./examples/)** | Complete working project with multiple modules, overlays, and cross-module dependencies |
+| **[Screen Spec](docs/screen-spec.md)** | Frontend screen contracts — ViewModel, navigation, analytics events in OpenAPI |
 | **[OpenAPI Overlays (Deep Dive)](docs/overlays-deep-dive.md)** | Complete overlay examples, JSONPath patterns, template context |
 | **[Enforceable Guardrails (AI-ready)](docs/development-guardrails.md)** | CI integration, security checks, allowlist configuration |
 

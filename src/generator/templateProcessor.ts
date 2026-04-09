@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import Handlebars from 'handlebars';
-import type { OpenAPISpec, OperationObject, ParameterObject } from '../types.js';
+import type { OpenAPISpec, OperationObject, ParameterObject, ResponseObject, ScreenEventDefinition } from '../types.js';
 import type { ExtensionInfo } from './overlayProcessor.js';
 import { isReference, getRefName } from '../types.js';
 
@@ -58,6 +58,44 @@ export interface TemplateContext {
   schemaNames: string[];
   /** Unique overlays with their parameters (for overlay adapter generation) */
   uniqueOverlays: UniqueOverlayContext[];
+  /** Screen contexts extracted from screen spec (populated when screen mode is enabled) */
+  screens: ScreenContext[];
+}
+
+/**
+ * Pre-parsed screen context from OpenAPI screen specification.
+ * Populated when module has `screen: true` in config.
+ */
+export interface ScreenContext {
+  /** Route path (e.g., '/home') */
+  route: string;
+  /** Stable constant name (e.g., 'HOME') from x-screen-const */
+  screenConst: string;
+  /** Traceability ID (e.g., 'SCR-001') from x-screen-id */
+  screenId: string;
+  /** Generated symbol name (e.g., 'HomePage') from x-screen-name */
+  screenName: string;
+  /** OpenAPI operationId (e.g., 'renderHomePage') */
+  operationId: string;
+  /** Whether back navigation is supported (from x-back-navigation) */
+  supportsBack: boolean;
+  /** ViewModel schema name (from 200 response $ref or x-view-model) */
+  viewModelSchema: string;
+  /** Forward navigation targets (from response links) */
+  links: ScreenLink[];
+  /** Analytics event declarations (from x-events) */
+  events: ScreenEventDefinition[];
+  /** Whether the screen requires authentication (has non-empty security) */
+  requiresAuth: boolean;
+}
+
+export interface ScreenLink {
+  /** Link key name (e.g., 'goToSettings') */
+  name: string;
+  /** Target route path */
+  targetRoute: string;
+  /** Target operationId */
+  targetOperationId: string;
 }
 
 export interface UniqueOverlayContext {
@@ -244,6 +282,7 @@ export function buildTemplateContext(
     contractPackage?: string;
     extensionInfo?: Map<string, ExtensionInfo>;
     appliedOverlays?: string[];
+    screen?: boolean;
   } = {}
 ): TemplateContext {
   const servicesPath = options.servicesPath || `fastify.services.${moduleName}`;
@@ -269,6 +308,9 @@ export function buildTemplateContext(
   // Extract unique overlays with their parameters (deduplicated)
   const uniqueOverlays = extractUniqueOverlays(routes);
 
+  // Extract screen contexts when screen mode is enabled
+  const screens = options.screen ? extractScreens(spec) : [];
+
   return {
     moduleName,
     spec,
@@ -285,6 +327,7 @@ export function buildTemplateContext(
     schemaTypes,
     schemaNames,
     uniqueOverlays,
+    screens,
   };
 }
 
@@ -581,6 +624,101 @@ function parameterToTsType(param: ParameterObject): string {
     default:
       return 'unknown';
   }
+}
+
+// =============================================================================
+// Screen Extraction
+// =============================================================================
+
+/**
+ * Build an operationId → route path lookup from spec paths
+ */
+function buildOperationRouteMap(spec: OpenAPISpec): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const [apiPath, pathItem] of Object.entries(spec.paths)) {
+    for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
+      const operation = pathItem[method];
+      if (operation?.operationId) {
+        map.set(operation.operationId, apiPath);
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * Extract screen contexts from OpenAPI spec.
+ * Parses GET operations that have x-screen-id into ScreenContext objects.
+ */
+function extractScreens(spec: OpenAPISpec): ScreenContext[] {
+  const screens: ScreenContext[] = [];
+  const operationRouteMap = buildOperationRouteMap(spec);
+
+  for (const [apiPath, pathItem] of Object.entries(spec.paths)) {
+    // Screen definitions are on GET operations only
+    const operation = pathItem.get;
+    if (!operation) continue;
+
+    const screenId = operation['x-screen-id'];
+    if (!screenId) continue;
+
+    const screenConst = operation['x-screen-const'] || '';
+    const screenName = operation['x-screen-name'] || '';
+    const operationId = operation.operationId || '';
+    const supportsBack = operation['x-back-navigation'] === true;
+    const events = operation['x-events'] || [];
+
+    // Determine if auth is required (non-empty security array)
+    const requiresAuth = Array.isArray(operation.security)
+      ? operation.security.length > 0 && operation.security.some(s => Object.keys(s).length > 0)
+      : false;
+
+    // Extract ViewModel schema from 200 response or x-view-model
+    let viewModelSchema = operation['x-view-model'] || '';
+    if (!viewModelSchema) {
+      const response200 = operation.responses?.['200'];
+      if (response200 && !isReference(response200)) {
+        const jsonContent = response200.content?.['application/json'];
+        if (jsonContent?.schema && isReference(jsonContent.schema)) {
+          viewModelSchema = getRefName(jsonContent.schema.$ref);
+        }
+      }
+    }
+
+    // Extract navigation links from 200 response
+    const links: ScreenLink[] = [];
+    const response200 = operation.responses?.['200'];
+    if (response200 && !isReference(response200)) {
+      const responseLinks = (response200 as ResponseObject).links;
+      if (responseLinks) {
+        for (const [linkName, linkObj] of Object.entries(responseLinks)) {
+          if (linkObj.operationId) {
+            const targetRoute = operationRouteMap.get(linkObj.operationId) || '';
+            links.push({
+              name: linkName,
+              targetRoute,
+              targetOperationId: linkObj.operationId,
+            });
+          }
+        }
+      }
+    }
+
+    screens.push({
+      route: apiPath,
+      screenConst,
+      screenId,
+      screenName,
+      operationId,
+      supportsBack,
+      viewModelSchema,
+      links,
+      events,
+      requiresAuth,
+    });
+  }
+
+  return screens;
 }
 
 // =============================================================================
