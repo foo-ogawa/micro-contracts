@@ -1,6 +1,6 @@
 {
   "name": "micro-contracts",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "Contract-first OpenAPI toolchain that keeps TypeScript UI and microservices aligned via code generation",
   "type": "module",
   "main": "dist/index.js",
@@ -11,6 +11,7 @@
   "files": [
     "dist",
     "docs",
+    "cli-contract.yaml",
     "README.md",
     "LICENSE"
   ],
@@ -55,6 +56,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.11.0",
+    "cli-contracts": "^0.1.1",
     "embedoc": "^0.9.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",

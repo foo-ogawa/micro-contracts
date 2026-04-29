@@ -1,0 +1,736 @@
+# yaml-language-server: $schema=./node_modules/cli-contracts/schemas/cli-contract.schema.json
+cliContracts: 0.1.0
+
+info:
+  title: micro-contracts CLI
+  version: 0.14.1
+  description: >-
+    Contract-first OpenAPI toolchain for TypeScript Web/API systems.
+    Generates contract packages, server routes, and frontend clients
+    from OpenAPI specifications with enforceable guardrails.
+  license:
+    name: MIT
+  contact:
+    name: foo-ogawa
+    url: https://github.com/foo-ogawa/micro-contracts
+
+commandSets:
+  micro-contracts:
+    summary: Contract-first OpenAPI toolchain for TypeScript.
+    executable: micro-contracts
+
+    globalOptions:
+      - name: version
+        aliases: [V]
+        description: Print version and exit.
+        schema:
+          type: boolean
+
+      - name: help
+        aliases: [h]
+        description: Show help and exit.
+        schema:
+          type: boolean
+
+    commands:
+      # ── generate ─────────────────────────────────────
+      generate:
+        summary: Generate code from OpenAPI specifications.
+        description: >-
+          Loads the multi-module config, applies overlays, runs Spectral
+          linting (unless skipped), and generates contract packages, server
+          routes, frontend clients, and documentation from OpenAPI specs.
+          Supports input-hash caching to skip unnecessary regeneration.
+        usage:
+          - micro-contracts generate
+          - micro-contracts generate -c my-config.yaml
+          - micro-contracts generate -m core,billing
+          - micro-contracts generate --contracts-only
+          - micro-contracts generate --force
+
+        options:
+          - name: config
+            aliases: [c]
+            description: Path to config file (micro-contracts.config.yaml).
+            valueName: path
+            schema:
+              type: string
+            file:
+              mode: read
+              exists: false
+              mediaType: application/yaml
+              encoding: utf-8
+
+          - name: module
+            aliases: [m]
+            description: Module names, comma-separated. Generates all modules if omitted.
+            valueName: names
+            schema:
+              type: string
+
+          - name: contracts-only
+            description: Generate contract packages only.
+            schema:
+              type: boolean
+              default: false
+
+          - name: server-only
+            description: Generate server routes only.
+            schema:
+              type: boolean
+              default: false
+
+          - name: frontend-only
+            description: Generate frontend clients only.
+            schema:
+              type: boolean
+              default: false
+
+          - name: docs-only
+            description: Generate documentation only.
+            schema:
+              type: boolean
+              default: false
+
+          - name: skip-lint
+            description: Skip Spectral linting before generation.
+            schema:
+              type: boolean
+              default: false
+
+          - name: manifest
+            description: >-
+              Generate manifest after generation. Enabled by default when
+              guardrails.yaml has a generated section. Use --no-manifest to disable.
+            schema:
+              type: boolean
+              default: true
+
+          - name: manifest-dir
+            description: Directory for manifest output.
+            valueName: path
+            schema:
+              type: string
+              default: packages/
+
+          - name: force
+            description: Bypass input hash cache and always regenerate.
+            schema:
+              type: boolean
+              default: false
+
+          - name: cache
+            description: >-
+              Enable input hash caching. Enabled by default.
+              Use --no-cache to disable both reading and writing cache.
+            schema:
+              type: boolean
+              default: true
+
+        exits:
+          '0':
+            description: Generation succeeded.
+            stdout:
+              format: text
+            files:
+              - path: packages/contract/{module}/**/*.ts
+                required: true
+                mediaType: text/x-typescript
+                encoding: utf-8
+                description: Generated contract packages.
+              - path: packages/contract-published/{module}/**/*.ts
+                required: false
+                mediaType: text/x-typescript
+                encoding: utf-8
+                description: Generated public contract packages.
+
+          '1':
+            description: Generation failed (config not found, spec invalid, or generation error).
+            stderr:
+              format: text
+
+        x-agent:
+          riskLevel: medium
+          requiresConfirmation: false
+          idempotent: true
+          sideEffects:
+            - file_write
+          recommendedBeforeUse:
+            - Ensure micro-contracts.config.yaml exists.
+            - Verify OpenAPI specs are valid.
+
+      # ── lint ─────────────────────────────────────────
+      lint:
+        summary: Lint OpenAPI specification.
+        description: >-
+          Validates an OpenAPI specification for x-micro-contracts extension
+          violations and structural issues using Spectral rules.
+        usage:
+          - micro-contracts lint spec/core/openapi/core.yaml
+          - micro-contracts lint spec/core/openapi/core.yaml --strict
+
+        arguments:
+          - name: input
+            index: 0
+            required: true
+            description: Path to OpenAPI spec file.
+            schema:
+              type: string
+            file:
+              mode: read
+              exists: true
+              mediaType: application/yaml
+              encoding: utf-8
+
+        options:
+          - name: strict
+            description: Treat warnings as errors.
+            schema:
+              type: boolean
+              default: false
+
+        exits:
+          '0':
+            description: Spec is valid. No lint errors found.
+            stdout:
+              format: text
+
+          '1':
+            description: Lint failed. Errors or warnings (in strict mode) found.
+            stderr:
+              format: text
+
+        x-agent:
+          riskLevel: low
+          requiresConfirmation: false
+          idempotent: true
+          sideEffects: []
+
+      # ── init ─────────────────────────────────────────
+      init:
+        summary: Initialize a new module structure with starter templates.
+        description: >-
+          Creates the directory structure, starter Handlebars templates,
+          shared schemas, Spectral rules, and optional config file for
+          a new module. Can also process an existing OpenAPI spec to
+          auto-add x-micro-contracts extensions.
+        usage:
+          - micro-contracts init core
+          - micro-contracts init core --openapi path/to/spec.yaml
+          - micro-contracts init myScreens --screens
+          - micro-contracts init users --skip-templates
+
+        arguments:
+          - name: name
+            index: 0
+            required: true
+            description: Module name (e.g., core, users, billing).
+            schema:
+              type: string
+
+        options:
+          - name: dir
+            aliases: [d]
+            description: Base directory for server/frontend files.
+            valueName: path
+            schema:
+              type: string
+              default: src
+
+          - name: openapi
+            aliases: [i]
+            description: OpenAPI spec to process (auto-adds x-micro-contracts-service/method extensions).
+            valueName: path
+            schema:
+              type: string
+            file:
+              mode: read
+              exists: true
+              mediaType: application/yaml
+              encoding: utf-8
+
+          - name: output
+            aliases: [o]
+            description: Output path for processed OpenAPI. Defaults to spec/{name}/openapi/{name}.yaml.
+            valueName: path
+            schema:
+              type: string
+
+          - name: skip-templates
+            description: Skip creating starter Handlebars templates.
+            schema:
+              type: boolean
+              default: false
+
+          - name: screens
+            description: Initialize as screen spec module (generates screen templates and starter spec).
+            schema:
+              type: boolean
+              default: false
+
+        exits:
+          '0':
+            description: Module initialized successfully.
+            stdout:
+              format: text
+            files:
+              - path: spec/{name}/openapi/{name}.yaml
+                required: false
+                mediaType: application/yaml
+                encoding: utf-8
+                description: OpenAPI spec (created when --openapi provided or --screens used).
+              - path: spec/default/templates/*.hbs
+                required: false
+                mediaType: text/x-handlebars-template
+                encoding: utf-8
+                description: Starter Handlebars templates.
+              - path: micro-contracts.config.yaml
+                required: false
+                mediaType: application/yaml
+                encoding: utf-8
+                description: Config file (created if not already present).
+
+          '1':
+            description: Initialization failed (OpenAPI file not found or write error).
+            stderr:
+              format: text
+
+        x-agent:
+          riskLevel: medium
+          requiresConfirmation: false
+          idempotent: true
+          sideEffects:
+            - file_write
+            - directory_create
+
+      # ── check ────────────────────────────────────────
+      check:
+        summary: Run guardrail checks.
+        description: >-
+          Runs AI guardrail checks against generated code and config.
+          Supports gating (1-5), selective check execution, auto-fix,
+          and CI integration via changed-files input.
+        usage:
+          - micro-contracts check
+          - micro-contracts check --gate 1,2
+          - micro-contracts check --only drift,manifest
+          - micro-contracts check --fix
+          - micro-contracts check --list
+          - micro-contracts check --list-gates
+
+        options:
+          - name: only
+            description: Run only specific checks (comma-separated check names).
+            valueName: checks
+            schema:
+              type: string
+
+          - name: skip
+            description: Skip specific checks (comma-separated check names).
+            valueName: checks
+            schema:
+              type: string
+
+          - name: gate
+            description: Run checks for specific gates only (comma-separated, 1-5).
+            valueName: gates
+            schema:
+              type: string
+
+          - name: verbose
+            aliases: [v]
+            description: Enable verbose output.
+            schema:
+              type: boolean
+              default: false
+
+          - name: fix
+            description: Auto-fix issues where possible.
+            schema:
+              type: boolean
+              default: false
+
+          - name: guardrails
+            aliases: [g]
+            description: Path to guardrails.yaml.
+            valueName: path
+            schema:
+              type: string
+            file:
+              mode: read
+              exists: false
+              mediaType: application/yaml
+              encoding: utf-8
+
+          - name: generated-dir
+            aliases: [d]
+            description: Path to generated files directory.
+            valueName: path
+            schema:
+              type: string
+              default: packages/
+
+          - name: changed-files
+            description: Path to file containing list of changed files (for CI).
+            valueName: path
+            schema:
+              type: string
+            file:
+              mode: read
+              exists: true
+              mediaType: text/plain
+              encoding: utf-8
+
+          - name: list
+            description: List available checks and exit.
+            schema:
+              type: boolean
+              default: false
+
+          - name: list-gates
+            description: List available gates and exit.
+            schema:
+              type: boolean
+              default: false
+
+        exits:
+          '0':
+            description: All checks passed (or --list/--list-gates output).
+            stdout:
+              format: text
+
+          '1':
+            description: One or more checks failed.
+            stdout:
+              format: text
+            stderr:
+              required: false
+              format: text
+
+        x-agent:
+          riskLevel: low
+          requiresConfirmation: false
+          idempotent: true
+          sideEffects: []
+          recommendedBeforeUse:
+            - Run generate first so generated files exist.
+
+      # ── pipeline ─────────────────────────────────────
+      pipeline:
+        summary: Run full guardrails pipeline.
+        description: >-
+          Executes the complete contract-first pipeline in order:
+          Gate 1,2 (pre-generation checks) → Generate → Gate 3,4,5
+          (post-generation checks). Supports --continue-on-error to
+          run all steps regardless of failures.
+        usage:
+          - micro-contracts pipeline
+          - micro-contracts pipeline --verbose
+          - micro-contracts pipeline --continue-on-error
+          - micro-contracts pipeline --contracts-only --skip-lint
+
+        options:
+          - name: config
+            aliases: [c]
+            description: Path to config file (micro-contracts.config.yaml).
+            valueName: path
+            schema:
+              type: string
+            file:
+              mode: read
+              exists: false
+              mediaType: application/yaml
+              encoding: utf-8
+
+          - name: verbose
+            aliases: [v]
+            description: Enable verbose output (show detailed logs).
+            schema:
+              type: boolean
+              default: false
+
+          - name: skip
+            description: Skip specific checks (comma-separated).
+            valueName: checks
+            schema:
+              type: string
+
+          - name: continue-on-error
+            description: Continue running even if a step fails.
+            schema:
+              type: boolean
+              default: false
+
+          - name: guardrails
+            aliases: [g]
+            description: Path to guardrails.yaml.
+            valueName: path
+            schema:
+              type: string
+            file:
+              mode: read
+              exists: false
+              mediaType: application/yaml
+              encoding: utf-8
+
+          - name: generated-dir
+            aliases: [d]
+            description: Path to generated files directory.
+            valueName: path
+            schema:
+              type: string
+              default: packages/
+
+          - name: manifest
+            description: >-
+              Generate manifest after generation. Enabled by default.
+              Use --no-manifest to disable.
+            schema:
+              type: boolean
+              default: true
+
+          - name: skip-lint
+            description: Skip Spectral linting before generation.
+            schema:
+              type: boolean
+              default: false
+
+          - name: contracts-only
+            description: Generate contract packages only.
+            schema:
+              type: boolean
+              default: false
+
+          - name: server-only
+            description: Generate server routes only.
+            schema:
+              type: boolean
+              default: false
+
+          - name: frontend-only
+            description: Generate frontend clients only.
+            schema:
+              type: boolean
+              default: false
+
+          - name: docs-only
+            description: Generate documentation only.
+            schema:
+              type: boolean
+              default: false
+
+          - name: force
+            description: Bypass input hash cache and always regenerate.
+            schema:
+              type: boolean
+              default: false
+
+          - name: cache
+            description: >-
+              Enable input hash caching. Enabled by default.
+              Use --no-cache to disable both reading and writing cache.
+            schema:
+              type: boolean
+              default: true
+
+        exits:
+          '0':
+            description: Pipeline completed successfully. All gates passed and generation succeeded.
+            stdout:
+              format: text
+
+          '1':
+            description: Pipeline failed. One or more steps had errors.
+            stdout:
+              format: text
+            stderr:
+              required: false
+              format: text
+
+        x-agent:
+          riskLevel: medium
+          requiresConfirmation: false
+          idempotent: true
+          sideEffects:
+            - file_write
+          recommendedBeforeUse:
+            - Ensure micro-contracts.config.yaml and guardrails.yaml exist.
+            - Verify OpenAPI specs are valid.
+
+      # ── deps ─────────────────────────────────────────
+      deps:
+        summary: Analyze module dependencies.
+        description: >-
+          Reads x-micro-contracts-depend-on declarations from OpenAPI specs
+          and config dependsOn fields. Can output dependency graphs (Mermaid),
+          impact analysis, reverse lookups, and validation results.
+        usage:
+          - micro-contracts deps
+          - micro-contracts deps --graph
+          - micro-contracts deps --module billing
+          - micro-contracts deps --impact core.User.getUsers
+          - micro-contracts deps --who-depends-on core
+          - micro-contracts deps --validate
+
+        options:
+          - name: config
+            aliases: [c]
+            description: Path to config file.
+            valueName: path
+            schema:
+              type: string
+            file:
+              mode: read
+              exists: false
+              mediaType: application/yaml
+              encoding: utf-8
+
+          - name: module
+            aliases: [m]
+            description: Module to analyze.
+            valueName: name
+            schema:
+              type: string
+
+          - name: graph
+            description: Output dependency graph in Mermaid format.
+            schema:
+              type: boolean
+              default: false
+
+          - name: impact
+            description: Analyze impact of changing a specific API (e.g., core.User.getUsers).
+            valueName: ref
+            schema:
+              type: string
+
+          - name: who-depends-on
+            description: Find modules that depend on a specific API.
+            valueName: ref
+            schema:
+              type: string
+
+          - name: validate
+            description: Validate dependencies against OpenAPI declarations.
+            schema:
+              type: boolean
+              default: false
+
+        exits:
+          '0':
+            description: Dependency analysis completed successfully.
+            stdout:
+              format: text
+
+          '1':
+            description: Analysis failed or validation errors found.
+            stderr:
+              format: text
+
+        x-agent:
+          riskLevel: low
+          requiresConfirmation: false
+          idempotent: true
+          sideEffects: []
+
+      # ── guardrails-init ──────────────────────────────
+      guardrails-init:
+        path: [guardrails-init]
+        summary: Create a guardrails.yaml configuration file.
+        description: >-
+          Generates a starter guardrails.yaml with default check
+          configuration. Fails if the target file already exists.
+        usage:
+          - micro-contracts guardrails-init
+          - micro-contracts guardrails-init -o custom-guardrails.yaml
+
+        options:
+          - name: output
+            aliases: [o]
+            description: Output path for guardrails.yaml.
+            valueName: path
+            schema:
+              type: string
+              default: guardrails.yaml
+
+        exits:
+          '0':
+            description: guardrails.yaml created successfully.
+            stdout:
+              format: text
+            files:
+              - path: '{options.output}'
+                required: true
+                mediaType: application/yaml
+                encoding: utf-8
+
+          '1':
+            description: Failed to create (file already exists or write error).
+            stderr:
+              format: text
+
+        x-agent:
+          riskLevel: low
+          requiresConfirmation: false
+          idempotent: false
+          sideEffects:
+            - file_write
+
+      # ── manifest ─────────────────────────────────────
+      manifest:
+        summary: Generate or verify manifest for generated artifacts.
+        description: >-
+          Scans a directory of generated files and produces a
+          .generated-manifest.json containing file hashes. In verify
+          mode, checks that existing files match the manifest.
+        usage:
+          - micro-contracts manifest
+          - micro-contracts manifest -d packages/
+          - micro-contracts manifest --verify
+          - micro-contracts manifest -o custom-manifest.json
+
+        options:
+          - name: dir
+            aliases: [d]
+            description: Directory to scan.
+            valueName: path
+            schema:
+              type: string
+              default: packages/
+
+          - name: verify
+            description: Verify existing manifest instead of generating.
+            schema:
+              type: boolean
+              default: false
+
+          - name: output
+            aliases: [o]
+            description: Output manifest path. Defaults to {dir}/.generated-manifest.json.
+            valueName: path
+            schema:
+              type: string
+
+        exits:
+          '0':
+            description: Manifest generated or verification passed.
+            stdout:
+              format: text
+            files:
+              - path: '{options.dir}/.generated-manifest.json'
+                required: false
+                mediaType: application/json
+                encoding: utf-8
+                description: Generated manifest (not created in verify mode).
+
+          '1':
+            description: Directory not found, manifest generation failed, or verification failed.
+            stderr:
+              format: text
+
+        x-agent:
+          riskLevel: low
+          requiresConfirmation: false
+          idempotent: true
+          sideEffects:
+            - file_write

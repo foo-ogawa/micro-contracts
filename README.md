@@ -340,6 +340,8 @@ modules:
 
 ## CLI Reference
 
+> **Machine-readable contract**: The full CLI specification is available as [`cli-contract.yaml`](cli-contract.yaml) ([CLI Contracts](https://www.npmjs.com/package/cli-contracts) format). For the detailed reference with exit codes, output contracts, and AI agent policies, see **[CLI Reference (full)](docs/cli-reference.md)**.
+
 ### generate
 
 Generate code from OpenAPI specifications.
@@ -484,6 +486,8 @@ export class UserService implements UserServiceApi {
 | Document | Description |
 |----------|-------------|
 | **[Examples](./examples/)** | Complete working project with multiple modules, overlays, and cross-module dependencies |
+| **[CLI Reference](docs/cli-reference.md)** | Full CLI reference with exit codes, output contracts, and AI agent policies |
+| **[CLI Contract](cli-contract.yaml)** | Machine-readable CLI specification ([CLI Contracts](https://www.npmjs.com/package/cli-contracts) format) |
 | **[Screen Spec](docs/screen-spec.md)** | Frontend screen contracts — ViewModel, navigation, analytics events in OpenAPI |
 | **[OpenAPI Overlays (Deep Dive)](docs/overlays-deep-dive.md)** | Complete overlay examples, JSONPath patterns, template context |
 | **[Enforceable Guardrails (AI-ready)](docs/development-guardrails.md)** | CI integration, security checks, allowlist configuration |
