@@ -45,7 +45,7 @@ export { generateServiceInterfaces } from './serviceGenerator.js';
 export { lintSpec, formatLintResults } from './linter.js';
 export { processOverlays, generateExtensionInterfaces } from './overlayProcessor.js';
 export { buildTemplateContext, generateWithTemplate } from './templateProcessor.js';
-export type { ScreenContext, ScreenLink, TemplateContext } from './templateProcessor.js';
+export type { ScreenContext, ScreenLink, ScreenAction, ScreenInteraction, TemplateContext } from './templateProcessor.js';
 export { collectInputFiles, computeInputHash } from './inputHash.js';
 
 /**

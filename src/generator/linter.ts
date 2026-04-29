@@ -9,6 +9,7 @@ import type {
   OperationObject,
   SchemaObject,
   LintError,
+  ResponseObject,
 } from '../types.js';
 import { isReference, getRefName, hasPrivateProperties, collectReferencedSchemas } from '../types.js';
 
@@ -94,8 +95,15 @@ export function lintSpec(spec: OpenAPISpec, options: LintOptions = {}): LintResu
         }
       }
       
-      // Validate x-events structure
+      // Deprecated x-events validation (warn + still validate structure)
       if (operation['x-events']) {
+        warnings.push({
+          type: 'warning',
+          code: 'SCREEN_DEPRECATED_X_EVENTS',
+          message: 'x-events (flat list) is deprecated. Use inline x-event instead.',
+          path,
+          location,
+        });
         const events = operation['x-events'];
         if (!Array.isArray(events)) {
           errors.push({
@@ -108,11 +116,11 @@ export function lintSpec(spec: OpenAPISpec, options: LintOptions = {}): LintResu
         } else {
           for (let i = 0; i < events.length; i++) {
             const event = events[i];
-            if (!event.name || !event.type || !event.method) {
+            if (!event.name || !event.type) {
               errors.push({
                 type: 'error',
                 code: 'SCREEN_INVALID_EVENT',
-                message: `x-events[${i}] must have name, type, and method`,
+                message: `x-events[${i}] must have name and type`,
                 path,
                 location,
               });
@@ -120,7 +128,77 @@ export function lintSpec(spec: OpenAPISpec, options: LintOptions = {}): LintResu
           }
         }
       }
-      
+
+      // Conflicting x-events + x-event on same operation
+      if (operation['x-events'] && operation['x-event'] != null) {
+        errors.push({
+          type: 'error',
+          code: 'SCREEN_CONFLICTING_EVENT_DEFS',
+          message: 'x-events and x-event cannot coexist on the same operation',
+          path,
+          location,
+        });
+      }
+
+      // Validate inline x-event on this operation (any method)
+      if (operation['x-event'] != null) {
+        validateInlineEvent(operation['x-event'], path, location, errors);
+      }
+
+      // Validate x-event on links (200 response only, GET operations)
+      if (method === 'get') {
+        const resp200 = operation.responses?.['200'];
+        if (resp200 && !isReference(resp200)) {
+          const responseLinks = (resp200 as ResponseObject).links;
+          if (responseLinks) {
+            for (const [linkName, linkObj] of Object.entries(responseLinks)) {
+              if (linkObj['x-event'] != null) {
+                validateInlineEvent(
+                  linkObj['x-event'],
+                  `${path}.responses.200.links.${linkName}`,
+                  location,
+                  errors,
+                );
+              }
+            }
+          }
+        }
+
+        // Validate x-interactions
+        if (operation['x-interactions']) {
+          const interactions = operation['x-interactions'];
+          if (!Array.isArray(interactions)) {
+            errors.push({
+              type: 'error',
+              code: 'SCREEN_INVALID_INTERACTIONS',
+              message: 'x-interactions must be an array',
+              path,
+              location,
+            });
+          } else {
+            for (let i = 0; i < interactions.length; i++) {
+              if (!interactions[i].name) {
+                errors.push({
+                  type: 'error',
+                  code: 'SCREEN_INVALID_INTERACTION',
+                  message: `x-interactions[${i}] must have a name`,
+                  path,
+                  location,
+                });
+              }
+              if (interactions[i]['x-event'] != null) {
+                validateInlineEvent(
+                  interactions[i]['x-event'],
+                  `${path}.x-interactions[${i}]`,
+                  location,
+                  errors,
+                );
+              }
+            }
+          }
+        }
+      }
+
       // Check public endpoints for private schema references
       if (operation['x-micro-contracts-published'] === true) {
         const privateErrors = checkPublicEndpointForPrivate(path, method, operation, spec);
@@ -281,6 +359,38 @@ function checkPrivateInRequired(schemaName: string, schema: SchemaObject): LintE
   }
   
   return warnings;
+}
+
+/**
+ * Validate an inline x-event value (string, {name}, or {$ref}).
+ */
+function validateInlineEvent(
+  raw: unknown,
+  path: string,
+  location: string,
+  errors: LintError[],
+): void {
+  if (typeof raw === 'string') return; // valid string form
+  if (typeof raw !== 'object' || raw === null) {
+    errors.push({
+      type: 'error',
+      code: 'SCREEN_INVALID_X_EVENT',
+      message: 'x-event must be a string, object with {name}, or {$ref}',
+      path,
+      location,
+    });
+    return;
+  }
+  const obj = raw as Record<string, unknown>;
+  if (!obj.$ref && !obj.name) {
+    errors.push({
+      type: 'error',
+      code: 'SCREEN_INVALID_X_EVENT',
+      message: 'x-event object must have either $ref or name',
+      path,
+      location,
+    });
+  }
 }
 
 /**

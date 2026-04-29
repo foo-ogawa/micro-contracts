@@ -20,6 +20,7 @@ export interface OpenAPISpec {
     responses?: Record<string, ResponseObject>;
     parameters?: Record<string, ParameterObject>;
     requestBodies?: Record<string, RequestBodyObject>;
+    'x-event-defs'?: Record<string, { name?: string; type?: string; params?: Record<string, string> }>;
   };
   tags?: Array<{
     name: string;
@@ -59,23 +60,63 @@ export interface OperationObject {
   'x-screen-id'?: string;
   'x-screen-name'?: string;
   'x-back-navigation'?: boolean;
+  /** @deprecated Use inline x-event instead. Will be removed in v0.15. */
   'x-events'?: ScreenEventDefinition[];
+  'x-event'?: string | InlineEventRaw;
+  'x-interactions'?: InteractionDefinitionRaw[];
   'x-view-model'?: string;
   'x-view-props'?: string;
 }
 
 /**
  * Screen analytics event definition (used in x-events)
+ * @deprecated Use InlineEventDefinition with inline x-event instead
  */
 export interface ScreenEventDefinition {
   /** Event name (e.g., 'home_view') */
   name: string;
   /** Event type (e.g., 'screen_view', 'user_action') */
   type: string;
-  /** Generated method name (e.g., 'trackView') */
-  method: string;
+  /**
+   * Generated method name (e.g., 'trackView')
+   * @deprecated Will be removed in v0.15
+   */
+  method?: string;
   /** Event parameters with their types */
   params?: Record<string, string>;
+}
+
+/**
+ * Inline event declaration (placed on get, links, actions, interactions).
+ * `type` is auto-inferred from placement if omitted in YAML.
+ */
+export interface InlineEventDefinition {
+  /** Event name (e.g., 'home_view') */
+  name: string;
+  /** Event type — resolved from placement or explicit override */
+  type: string;
+  /** Event parameters (auto-derived for get/links, or explicit) */
+  params?: Record<string, string>;
+}
+
+/**
+ * Raw x-event value as it appears in OpenAPI YAML ($ref not yet resolved).
+ */
+export type InlineEventRaw =
+  | string
+  | { name: string; type?: string; params?: Record<string, string> }
+  | { $ref: string };
+
+/**
+ * Raw x-interactions entry as it appears in OpenAPI YAML.
+ * `name` is required. All other fields are optional.
+ * Projects may add custom fields which are passed through to templates.
+ */
+export interface InteractionDefinitionRaw {
+  name: string;
+  description?: string;
+  'x-event'?: string | InlineEventRaw;
+  [key: string]: unknown;
 }
 
 export interface ParameterObject {
@@ -104,6 +145,7 @@ export interface ResponseObject {
 export interface LinkObject {
   operationId?: string;
   description?: string;
+  'x-event'?: string | InlineEventRaw;
 }
 
 export interface MediaTypeObject {
