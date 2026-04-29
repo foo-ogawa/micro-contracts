@@ -44,9 +44,16 @@ Only concerns with **no OpenAPI-native representation** need extensions:
 | `x-screen-id`       | Yes      | Traceability ID (e.g., `SCR-001`)         | Links to requirements and E2E annotations                       |
 | `x-screen-name`     | Yes*     | Generated symbol name (e.g., `HomePage`)  | Drives `use{Name}Events()`, `wrap{Name}ViewModel()`            |
 | `x-back-navigation` | No       | History-based back navigation support     | `links` only cover forward navigation with known targets        |
-| `x-events`          | No       | Analytics event declarations              | No OpenAPI concept for client-side event tracking               |
+| `x-event`           | No       | Inline analytics event declaration        | Type auto-inferred from placement; supports string, object, `$ref` |
+| `x-interactions`    | No       | In-page interaction bindings              | Declares non-navigation UI interactions (swipe, selection, etc.) |
 | `x-view-model`      | No       | Explicit ViewModel schema name            | Alternative to auto-inference from `$ref`                       |
 | `x-view-props`      | No       | ViewProps interface name                  | For framework-specific wrapper generation                       |
+
+**Deprecated extensions:**
+
+| Extension   | Status | Migration |
+| ----------- | ------ | --------- |
+| `x-events`  | Deprecated (v0.14) — removed in v0.15 | Replace with inline `x-event` on GET, links, actions, or interactions |
 
 \* When `x-screen-id` is present, `x-screen-const` and `x-screen-name` are required (enforced by lint).
 
@@ -114,6 +121,8 @@ Effects of `screen: true`:
 
 ## Screen Spec YAML Structure
 
+### Basic Example (inline `x-event`)
+
 ```yaml
 openapi: '3.1.0'
 info:
@@ -133,13 +142,14 @@ paths:
       x-screen-id: SCR-001
       x-screen-name: HomePage
       x-back-navigation: false
-      x-events:
-        - name: home_view
-          type: screen_view
-          method: trackView
-        - name: sign_out
-          type: user_action
-          method: trackSignOut
+      x-event: home_view                   # → type: "screen_view" (auto-inferred)
+      x-interactions:
+        - name: daySwipe
+          description: Horizontal day-by-day swipe
+          x-event:
+            name: day_swipe
+            params:
+              direction: string
       summary: Render home page
       responses:
         '200':
@@ -151,9 +161,91 @@ paths:
           links:
             goToSettings:
               operationId: renderSettingsPage
-            goToChat:
-              operationId: renderChatPage
+            goToDetail:
+              operationId: renderDetailPage
+              x-event:                      # → type: "user_action" (auto-inferred)
+                $ref: '#/components/x-event-defs/itemTap'
+    post:
+      operationId: actionHomePage
+      x-event: mode_switch                  # → type: "user_action" (auto-inferred)
+      responses:
+        '200':
+          description: OK
+
+components:
+  x-event-defs:
+    itemTap:
+      name: item_tap
+      params:
+        itemId: string
 ```
+
+### `x-event` — Three Forms
+
+```yaml
+# 1. String form (most common)
+x-event: home_view
+
+# 2. Object form (type override / extra params)
+x-event:
+  name: oauth_callback_result
+  type: system
+  params:
+    success: boolean
+
+# 3. $ref form (reusable definitions)
+x-event:
+  $ref: '#/components/x-event-defs/itemTap'
+```
+
+`$ref` resolves to `#/components/x-event-defs/*` (local references only).
+
+### `x-event` Placement and Type Inference
+
+| Placement | Inferred `type` | Params auto-derivation |
+|-----------|-----------------|------------------------|
+| `get` operation | `screen_view` | From path parameters (e.g., `/calendar/{yearMonth}` → `{ yearMonth: string }`) |
+| `responses.200.links.*` | `user_action` | From target route's path parameters |
+| `post` / `put` / `patch` / `delete` | `user_action` | None — specify explicitly in `params` |
+| `x-interactions.*` | `user_action` | None — specify explicitly in `params` |
+
+`type` can be overridden explicitly in object form. Recognized values: `screen_view`, `user_action`, `system`.
+
+### `x-interactions`
+
+Declares in-page interaction bindings that don't map to HTTP operations or link navigations.
+
+```yaml
+x-interactions:
+  - name: daySwipe
+    description: Horizontal day-by-day swipe navigation
+    x-event:
+      name: day_swipe
+      params:
+        direction: string
+  - name: itemSelect
+    description: Select an item from choices
+    x-event:
+      name: item_select
+      params:
+        itemId: string
+    module: '@ui/selector'    # project-specific field (passed through)
+```
+
+Required field: `name`. All other fields are optional. Project-specific fields (e.g., `module`, `factory`) are passed through to templates in `extras`.
+
+### Reusable Event Definitions
+
+```yaml
+components:
+  x-event-defs:
+    itemTap:
+      name: item_tap
+      params:
+        itemId: string
+```
+
+Referenced with `$ref: '#/components/x-event-defs/itemTap'` from any `x-event` placement.
 
 ### Field Reference
 
@@ -169,11 +261,13 @@ paths:
 
 **`x-back-navigation`** — When `true`, declares that the screen supports browser back or UI back button navigation. Unlike forward navigation covered by `links`, the back destination is determined at runtime.
 
-**`x-events`** — Array of analytics event declarations. Each event has `name` (event name), `type` (category), and `method` (generated method name), with an optional `params` map of parameter names to types.
+**`x-event`** — Inline analytics event. Type is auto-inferred from placement. Supports string, object (with `name`, `type?`, `params?`), and `$ref` forms. Params are auto-derived from path parameters for `get` and `links` placements; for actions and interactions, specify params explicitly.
 
-**`responses.200.links`** — Forward navigation targets. References target screens by `operationId`.
+**`x-interactions`** — Array of in-page interaction bindings. Each entry has `name` (required), `description` (recommended), optional `x-event`, and any project-specific fields.
 
-**`POST` operations** — A `POST` on the same path defines user actions (form submissions, button taps, etc.). Specify the action payload schema in `requestBody`.
+**`responses.200.links`** — Forward navigation targets. References target screens by `operationId`. Each link may have an optional `x-event`.
+
+**`POST` / `PUT` / `PATCH` / `DELETE` operations** — Mutation operations on the same path define user actions (form submissions, button taps, deletions, etc.). Each may have an optional `x-event`.
 
 ---
 
@@ -183,16 +277,52 @@ When `screen: true` is enabled, `TemplateContext` includes a pre-parsed `screens
 
 ```typescript
 interface ScreenContext {
-  route: string;           // '/home'
-  screenConst: string;     // 'HOME'
-  screenId: string;        // 'SCR-001'
-  screenName: string;      // 'HomePage'
-  operationId: string;     // 'renderHomePage'
-  supportsBack: boolean;   // false
-  viewModelSchema: string; // 'HomePageViewModel'
-  links: ScreenLink[];     // [{name, targetRoute, targetOperationId}]
-  events: ScreenEventDefinition[]; // [{name, type, method, params?}]
-  requiresAuth: boolean;   // true
+  route: string;                         // '/home'
+  screenConst: string;                   // 'HOME'
+  screenId: string;                      // 'SCR-001'
+  screenName: string;                    // 'HomePage'
+  operationId: string;                   // 'renderHomePage'
+  supportsBack: boolean;                 // false
+  viewModelSchema: string;               // 'HomePageViewModel'
+  links: ScreenLink[];                   // forward navigation targets
+  requiresAuth: boolean;                 // true
+  pathParams: string[];                  // ['yearMonth'] for /calendar/{yearMonth}
+
+  // Inline x-event (v0.14+)
+  screenEvent?: InlineEventDefinition;   // GET x-event (screen_view)
+  actions: ScreenAction[];               // post/put/patch/delete with events
+  interactions: ScreenInteraction[];     // x-interactions with events
+
+  /** @deprecated Use screenEvent / links[].event / actions[].event instead */
+  events: ScreenEventDefinition[];       // legacy x-events (backward compat)
+}
+
+interface ScreenLink {
+  name: string;                          // 'goToSettings'
+  targetRoute: string;                   // '/settings'
+  targetOperationId: string;             // 'renderSettingsPage'
+  event?: InlineEventDefinition;         // link x-event (user_action)
+}
+
+interface ScreenAction {
+  method: string;                        // 'post', 'put', 'patch', 'delete'
+  operationId: string;                   // 'actionHomePage'
+  summary: string;
+  schemaRef: string;                     // request body $ref name
+  event?: InlineEventDefinition;         // action x-event (user_action)
+}
+
+interface ScreenInteraction {
+  name: string;                          // 'daySwipe'
+  description: string;                   // 'Horizontal day-by-day swipe'
+  event?: InlineEventDefinition;         // interaction x-event (user_action)
+  extras: Record<string, unknown>;       // project-specific fields
+}
+
+interface InlineEventDefinition {
+  name: string;                          // 'home_view'
+  type: string;                          // 'screen_view' | 'user_action' | 'system'
+  params?: Record<string, string>;       // auto-derived or explicit
 }
 ```
 
@@ -254,11 +384,60 @@ export const HOME_PAGE_LINKS = {
 } as const;
 ```
 
-### screen-events.hbs
+### screen-events.hbs (inline x-event)
 
-Generates analytics event hooks. Outputs a `use{ScreenName}Events()` function for each screen that has `x-events`.
+Generates analytics event hooks using the new inline `x-event` structure. Templates can use `screenEvent`, `links[].event`, `actions[].event`, and `interactions[].event`.
 
-Example output:
+Example template:
+
+```handlebars
+{{#each screens}}
+{{#if screenEvent}}
+export function use{{screenName}}ScreenView() {
+  const tracked = useRef(false);
+  useEffect(() => {
+    if (tracked.current) return;
+    tracked.current = true;
+    trackEvent('{{screenEvent.name}}', '{{screenEvent.type}}', {});
+  }, []);
+}
+{{/if}}
+
+{{#each links}}
+{{#if this.event}}
+export function navigateVia{{capitalize this.name}}(
+  {{eventParamsSignature this.event.params}}
+) {
+  trackEvent('{{this.event.name}}', '{{this.event.type}}',
+    { {{#each this.event.params}}{{@key}}{{#unless @last}}, {{/unless}}{{/each}} });
+  return '{{this.targetRoute}}';
+}
+{{/if}}
+{{/each}}
+
+{{#each actions}}
+{{#if this.event}}
+export function track{{capitalize this.operationId}}Event(
+  {{eventParamsSignature this.event.params}}
+) {
+  trackEvent('{{this.event.name}}', '{{this.event.type}}',
+    { {{#each this.event.params}}{{@key}}{{#unless @last}}, {{/unless}}{{/each}} });
+}
+{{/if}}
+{{/each}}
+{{/each}}
+```
+
+### Handlebars Helpers
+
+| Helper | Description | Example |
+|--------|-------------|---------|
+| `hasEvent` | Returns `true` if the screen has any events (screenEvent, link events, action events, or interaction events) | `{{#if (hasEvent this)}}...{{/if}}` |
+| `eventParamsSignature` | Expands params map to TypeScript argument list | `{{eventParamsSignature screenEvent.params}}` → `yearMonth: string` |
+
+### Legacy screen-events.hbs (deprecated x-events)
+
+The legacy `x-events` array is still available in `events` for backward compatibility:
 
 ```typescript
 export function useHomePageEvents() {
@@ -271,30 +450,24 @@ export function useHomePageEvents() {
 }
 ```
 
-Events with parameters are also supported with type safety:
-
-```typescript
-export function useChatPageEvents() {
-  return {
-    trackMessageSend: (message_length: number) =>
-      trackEvent('chat_message_send', 'user_action', { message_length }),
-  };
-}
-```
-
 ---
 
 ## Lint Rules
 
 `micro-contracts lint` performs the following screen-specific checks:
 
-| Code                          | Level   | Description                                              |
-| ----------------------------- | ------- | -------------------------------------------------------- |
-| `SCREEN_MISSING_CONST`        | Error   | `x-screen-id` present but `x-screen-const` missing      |
-| `SCREEN_MISSING_NAME`         | Error   | `x-screen-id` present but `x-screen-name` missing       |
-| `SCREEN_MISSING_OPERATION_ID` | Error   | Screen operation missing `operationId`                   |
-| `SCREEN_INVALID_EVENTS`       | Error   | `x-events` is not an array                               |
-| `SCREEN_INVALID_EVENT`        | Error   | `x-events` item missing `name`, `type`, or `method`     |
+| Code                             | Level   | Description                                                    |
+| -------------------------------- | ------- | -------------------------------------------------------------- |
+| `SCREEN_MISSING_CONST`           | Error   | `x-screen-id` present but `x-screen-const` missing            |
+| `SCREEN_MISSING_NAME`            | Error   | `x-screen-id` present but `x-screen-name` missing             |
+| `SCREEN_MISSING_OPERATION_ID`    | Error   | Screen operation missing `operationId`                         |
+| `SCREEN_INVALID_X_EVENT`         | Error   | `x-event` is not a string, `{name}` object, or `{$ref}`       |
+| `SCREEN_CONFLICTING_EVENT_DEFS`  | Error   | `x-events` and `x-event` coexist on the same operation        |
+| `SCREEN_INVALID_INTERACTIONS`    | Error   | `x-interactions` is not an array                               |
+| `SCREEN_INVALID_INTERACTION`     | Error   | `x-interactions` entry missing `name`                          |
+| `SCREEN_DEPRECATED_X_EVENTS`     | Warning | `x-events` (flat list) is deprecated — use inline `x-event`   |
+| `SCREEN_INVALID_EVENTS`          | Error   | `x-events` is not an array (legacy validation)                 |
+| `SCREEN_INVALID_EVENT`           | Error   | `x-events` item missing `name` or `type` (legacy validation)  |
 
 In `screen: true` modules, `MISSING_X_SERVICE` / `MISSING_X_METHOD` warnings are suppressed (screen specs do not need service/method declarations).
 
@@ -331,6 +504,11 @@ outputs:
 | Field             | Type      | Description                                        |
 | ----------------- | --------- | -------------------------------------------------- |
 | `screens`         | array     | `ScreenContext[]` — array of screen definitions    |
+| `screens[].screenEvent` | object? | `InlineEventDefinition` — GET screen_view event |
+| `screens[].actions` | array   | `ScreenAction[]` — mutation operations with events |
+| `screens[].interactions` | array | `ScreenInteraction[]` — interaction bindings with events |
+| `screens[].pathParams` | string[] | Path parameter names for this route              |
+| `screens[].links[].event` | object? | `InlineEventDefinition` — link navigation event |
 | `spec`            | object    | Raw OpenAPI spec (for direct access when needed)   |
 | `title`           | string    | OpenAPI title                                      |
 | `version`         | string    | OpenAPI version                                    |
@@ -344,11 +522,14 @@ outputs:
 
 ### Tier 1 — Core (built into micro-contracts)
 
-- Type definitions: `x-screen-*` fields on `OperationObject`
-- Screen context extraction: `TemplateContext.screens`
-- Lint rules: Screen spec consistency checks
+- Type definitions: `x-screen-*`, `x-event`, `x-interactions` on `OperationObject`
+- Screen context extraction: `TemplateContext.screens` (with `screenEvent`, `actions`, `interactions`, `pathParams`)
+- `$ref` resolution: `components.x-event-defs` local references
+- Params auto-derivation: path params for `get` and `links` placements
+- Lint rules: Screen spec consistency, inline event validation, interaction validation
 - `init --screens`: Starter file generation
 - Default templates: `screen-navigation.hbs`, `screen-events.hbs`
+- Handlebars helpers: `hasEvent`, `eventParamsSignature`
 
 ### Tier 2 — Optional Packages / Official Recipes (future)
 

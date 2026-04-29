@@ -123,7 +123,8 @@ Standard OpenAPI constructs can also define **frontend screen contracts** — br
 Screen Spec (OpenAPI YAML)
   ├── ViewModel Types       (from schemas — zero new template work)
   ├── Navigation Map        (from response links → typed routing)
-  └── Event Hooks           (from x-events → typed analytics)
+  ├── Event Hooks           (from inline x-event → typed analytics)
+  └── Interaction Bindings  (from x-interactions → typed in-page interactions)
 ```
 
 Enable with `screen: true` in module config:
@@ -211,13 +212,15 @@ project/
 
 Used in modules with `screen: true`. See **[Screen Spec](docs/screen-spec.md)** for details.
 
-| Extension | Type | Description |
-|-----------|------|-------------|
-| `x-screen-const` | string | Stable constant name (e.g., `HOME`) |
-| `x-screen-id` | string | Traceability ID (e.g., `SCR-001`) |
-| `x-screen-name` | string | Generated symbol name (e.g., `HomePage`) |
-| `x-back-navigation` | boolean | Supports history-based back navigation |
-| `x-events` | array | Analytics event declarations (`{name, type, method, params?}`) |
+| Extension | Type | Placement | Description |
+|-----------|------|-----------|-------------|
+| `x-screen-const` | string | GET operation | Stable constant name (e.g., `HOME`) |
+| `x-screen-id` | string | GET operation | Traceability ID (e.g., `SCR-001`) |
+| `x-screen-name` | string | GET operation | Generated symbol name (e.g., `HomePage`) |
+| `x-back-navigation` | boolean | GET operation | Supports history-based back navigation |
+| `x-event` | string \| object \| `$ref` | GET / links / post,put,patch,delete / x-interactions | Inline analytics event declaration (v0.14+) |
+| `x-interactions` | array | GET operation | In-page interaction bindings with optional events (v0.14+) |
+| `x-events` | array | GET operation | **Deprecated** — use inline `x-event` instead |
 
 ### Example
 

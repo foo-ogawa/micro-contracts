@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import Handlebars from 'handlebars';
-import type { OpenAPISpec, OperationObject, ParameterObject, ResponseObject, ScreenEventDefinition } from '../types.js';
+import type { OpenAPISpec, OperationObject, ParameterObject, ResponseObject, ScreenEventDefinition, InlineEventDefinition, InlineEventRaw, InteractionDefinitionRaw } from '../types.js';
 import type { ExtensionInfo } from './overlayProcessor.js';
 import { isReference, getRefName } from '../types.js';
 
@@ -83,10 +83,21 @@ export interface ScreenContext {
   viewModelSchema: string;
   /** Forward navigation targets (from response links) */
   links: ScreenLink[];
-  /** Analytics event declarations (from x-events) */
+  /**
+   * Analytics event declarations (from x-events)
+   * @deprecated Use screenEvent / links[].event / actions[].event instead
+   */
   events: ScreenEventDefinition[];
   /** Whether the screen requires authentication (has non-empty security) */
   requiresAuth: boolean;
+  /** Inline event on the GET operation (screen_view) */
+  screenEvent?: InlineEventDefinition;
+  /** Mutation operations (post/put/patch/delete) with optional inline events */
+  actions: ScreenAction[];
+  /** Interaction bindings with optional inline events */
+  interactions: ScreenInteraction[];
+  /** Path parameters of this screen's route */
+  pathParams: string[];
 }
 
 export interface ScreenLink {
@@ -96,6 +107,27 @@ export interface ScreenLink {
   targetRoute: string;
   /** Target operationId */
   targetOperationId: string;
+  /** Inline event fired on navigation via this link */
+  event?: InlineEventDefinition;
+}
+
+/** Mutation operation (post/put/patch/delete) on a screen's path */
+export interface ScreenAction {
+  /** HTTP method (post, put, patch, delete) */
+  method: string;
+  operationId: string;
+  summary: string;
+  schemaRef: string;
+  event?: InlineEventDefinition;
+}
+
+/** In-page interaction binding from x-interactions */
+export interface ScreenInteraction {
+  name: string;
+  description: string;
+  event?: InlineEventDefinition;
+  /** Project-specific fields passed through from YAML */
+  extras: Record<string, unknown>;
 }
 
 export interface UniqueOverlayContext {
@@ -647,15 +679,96 @@ function buildOperationRouteMap(spec: OpenAPISpec): Map<string, string> {
 }
 
 /**
+ * Extract {param} segments from a route path.
+ */
+function extractPathParams(route: string): string[] {
+  const matches = route.matchAll(/\{(\w+)\}/g);
+  return [...matches].map(m => m[1]);
+}
+
+/**
+ * Resolve raw x-event (string | object | $ref) into InlineEventDefinition.
+ */
+function resolveInlineEvent(
+  raw: string | Record<string, unknown> | undefined,
+  eventDefs: Record<string, Record<string, unknown>>,
+  defaultType: string,
+): InlineEventDefinition | undefined {
+  if (raw == null) return undefined;
+
+  if (typeof raw === 'string') {
+    return { name: raw, type: defaultType };
+  }
+
+  if (typeof raw === 'object' && '$ref' in raw && typeof raw.$ref === 'string') {
+    const ref = raw.$ref;
+    if (!ref.startsWith('#/components/x-event-defs/')) {
+      return { name: ref, type: defaultType };
+    }
+    const defName = ref.split('/').pop()!;
+    const resolved = eventDefs[defName];
+    if (!resolved) return { name: defName, type: defaultType };
+    return {
+      name: (resolved.name as string) ?? defName,
+      type: (resolved.type as string) ?? defaultType,
+      params: resolved.params as Record<string, string> | undefined,
+    };
+  }
+
+  return {
+    name: (raw.name as string) ?? '',
+    type: (raw.type as string) ?? defaultType,
+    params: raw.params as Record<string, string> | undefined,
+  };
+}
+
+/**
+ * Auto-derive params from path parameters when no explicit params are set.
+ * Only applies to 'get' (screen path params) and 'link' (target route params).
+ */
+function deriveEventParams(
+  event: InlineEventDefinition,
+  placement: 'get' | 'link',
+  context: { routePath: string; targetRoute?: string },
+): InlineEventDefinition {
+  if (event.params) return event;
+
+  const route = placement === 'get' ? context.routePath : context.targetRoute;
+  if (route) {
+    const params = extractPathParams(route);
+    if (params.length > 0) {
+      event.params = Object.fromEntries(params.map(p => [p, 'string']));
+    }
+  }
+  return event;
+}
+
+/**
+ * Extract schema $ref name from a mutation operation's request body.
+ */
+function extractSchemaRef(operation: OperationObject): string {
+  if (!operation.requestBody) return '';
+  if (isReference(operation.requestBody)) {
+    return getRefName(operation.requestBody.$ref);
+  }
+  const jsonContent = operation.requestBody.content?.['application/json'];
+  if (jsonContent?.schema && isReference(jsonContent.schema)) {
+    return getRefName(jsonContent.schema.$ref);
+  }
+  return '';
+}
+
+/**
  * Extract screen contexts from OpenAPI spec.
  * Parses GET operations that have x-screen-id into ScreenContext objects.
  */
 function extractScreens(spec: OpenAPISpec): ScreenContext[] {
   const screens: ScreenContext[] = [];
   const operationRouteMap = buildOperationRouteMap(spec);
+  const components = (spec.components ?? {}) as Record<string, unknown>;
+  const eventDefs = (components['x-event-defs'] ?? {}) as Record<string, Record<string, unknown>>;
 
   for (const [apiPath, pathItem] of Object.entries(spec.paths)) {
-    // Screen definitions are on GET operations only
     const operation = pathItem.get;
     if (!operation) continue;
 
@@ -666,14 +779,24 @@ function extractScreens(spec: OpenAPISpec): ScreenContext[] {
     const screenName = operation['x-screen-name'] || '';
     const operationId = operation.operationId || '';
     const supportsBack = operation['x-back-navigation'] === true;
-    const events = operation['x-events'] || [];
 
-    // Determine if auth is required (non-empty security array)
+    // Legacy x-events (backward compat)
+    const legacyEvents = operation['x-events'] || [];
+
+    // Inline x-event on GET (screen_view)
+    let screenEvent = resolveInlineEvent(
+      operation['x-event'] as string | Record<string, unknown> | undefined,
+      eventDefs,
+      'screen_view',
+    );
+    if (screenEvent) {
+      deriveEventParams(screenEvent, 'get', { routePath: apiPath });
+    }
+
     const requiresAuth = Array.isArray(operation.security)
       ? operation.security.length > 0 && operation.security.some(s => Object.keys(s).length > 0)
       : false;
 
-    // Extract ViewModel schema from 200 response or x-view-model
     let viewModelSchema = operation['x-view-model'] || '';
     if (!viewModelSchema) {
       const response200 = operation.responses?.['200'];
@@ -685,7 +808,7 @@ function extractScreens(spec: OpenAPISpec): ScreenContext[] {
       }
     }
 
-    // Extract navigation links from 200 response
+    // Navigation links from 200 response (with optional inline x-event)
     const links: ScreenLink[] = [];
     const response200 = operation.responses?.['200'];
     if (response200 && !isReference(response200)) {
@@ -694,15 +817,60 @@ function extractScreens(spec: OpenAPISpec): ScreenContext[] {
         for (const [linkName, linkObj] of Object.entries(responseLinks)) {
           if (linkObj.operationId) {
             const targetRoute = operationRouteMap.get(linkObj.operationId) || '';
+            let linkEvent = resolveInlineEvent(
+              linkObj['x-event'] as string | Record<string, unknown> | undefined,
+              eventDefs,
+              'user_action',
+            );
+            if (linkEvent) {
+              deriveEventParams(linkEvent, 'link', { routePath: apiPath, targetRoute });
+            }
             links.push({
               name: linkName,
               targetRoute,
               targetOperationId: linkObj.operationId,
+              event: linkEvent,
             });
           }
         }
       }
     }
+
+    // Mutation operations (post/put/patch/delete)
+    const actions: ScreenAction[] = [];
+    const mutationMethods = ['post', 'put', 'patch', 'delete'] as const;
+    for (const method of mutationMethods) {
+      const mutationOp = pathItem[method];
+      if (!mutationOp) continue;
+      const actionEvent = resolveInlineEvent(
+        mutationOp['x-event'] as string | Record<string, unknown> | undefined,
+        eventDefs,
+        'user_action',
+      );
+      actions.push({
+        method,
+        operationId: mutationOp.operationId ?? '',
+        summary: mutationOp.summary ?? '',
+        schemaRef: extractSchemaRef(mutationOp),
+        event: actionEvent,
+      });
+    }
+
+    // x-interactions
+    const rawInteractions = (operation['x-interactions'] ?? []) as InteractionDefinitionRaw[];
+    const interactions: ScreenInteraction[] = rawInteractions.map(i => {
+      const { name, description, 'x-event': rawEvent, ...extras } = i;
+      return {
+        name: name ?? '',
+        description: description ?? '',
+        event: resolveInlineEvent(
+          rawEvent as string | Record<string, unknown> | undefined,
+          eventDefs,
+          'user_action',
+        ),
+        extras,
+      };
+    });
 
     screens.push({
       route: apiPath,
@@ -713,7 +881,11 @@ function extractScreens(spec: OpenAPISpec): ScreenContext[] {
       supportsBack,
       viewModelSchema,
       links,
-      events,
+      events: legacyEvents,
+      screenEvent,
+      actions,
+      interactions,
+      pathParams: extractPathParams(apiPath),
       requiresAuth,
     });
   }
@@ -775,6 +947,20 @@ Handlebars.registerHelper('refName', (ref: string) => {
 
 // JSON helper
 Handlebars.registerHelper('json', (obj) => JSON.stringify(obj, null, 2));
+
+// Screen event helpers
+Handlebars.registerHelper('hasEvent', (ctx) =>
+  !!(ctx?.screenEvent || ctx?.links?.some((l: ScreenLink) => l.event) ||
+     ctx?.actions?.some((a: ScreenAction) => a.event) ||
+     ctx?.interactions?.some((i: ScreenInteraction) => i.event))
+);
+
+Handlebars.registerHelper('eventParamsSignature', (params) => {
+  if (!params) return '';
+  return Object.entries(params)
+    .map(([k, v]) => `${k}: ${v === 'integer' ? 'number' : v}`)
+    .join(', ');
+});
 
 // Conditional block helpers
 Handlebars.registerHelper('ifCond', function(this: unknown, v1, operator, v2, options) {
